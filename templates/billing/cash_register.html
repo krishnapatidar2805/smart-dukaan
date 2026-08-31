@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Daily Cash Register · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+  <div>
+    <h2>💰 Daily Cash Register (Drawer Management)</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem; margin-top:2px;">
+      Today's Drawer: <strong>{{ today|date:"d M Y" }}</strong>
+    </div>
+  </div>
+  <a href="{% url 'billing:cash_register_history' %}" class="btn">📜 Closure History</a>
+</div>
+
+{% if not register %}
+<div style="max-width:540px; margin:40px auto;">
+  <div class="card" style="text-align:center; padding:36px;">
+    <div style="font-size:3rem; margin-bottom:12px;">🏪</div>
+    <h3>Open Register for Today</h3>
+    <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:24px;">
+      Start your daily cash tracking. Enter the physical cash amount currently present in the drawer (Float / Peti).
+    </p>
+
+    <form method="post" style="text-align:left;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="open">
+      <div class="field">
+        <label>Opening Cash Amount (Rs.) *</label>
+        <input type="number" name="opening_cash" placeholder="e.g. 1000.00" step="0.01" min="0" required autofocus>
+      </div>
+      <div class="field">
+        <label>Opening Remarks (Optional)</label>
+        <input type="text" name="notes" placeholder="e.g. Clean float with change notes">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%; padding:12px;">Open Cash Drawer →</button>
+    </form>
+  </div>
+</div>
+
+{% elif register.status == 'open' %}
+<div class="stat-grid" style="margin-bottom:24px;">
+  <div class="card stat-card">
+    <div class="stat-label">Opening Float</div>
+    <div class="stat-value">Rs. {{ register.opening_cash|floatformat:2 }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Today's Cash Sales</div>
+    <div class="stat-value primary">Rs. {{ cash_sales|floatformat:2 }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Cash Added (In)</div>
+    <div class="stat-value" style="color:var(--accent);">+ Rs. {{ register.cash_in|floatformat:2 }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Cash Expenses (Out)</div>
+    <div class="stat-value danger">- Rs. {{ register.cash_out|floatformat:2 }}</div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1.2fr 1fr; gap:24px; align-items:start;">
+  <div>
+    <div class="card" style="margin-bottom:24px; border:2px solid rgba(16, 185, 129, 0.3);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="color:var(--primary);">💵 Live Drawer Summary</h3>
+        <span class="badge badge-success">Register is OPEN</span>
+      </div>
+      <div class="summary-row">
+        <span>Opening Float</span>
+        <span>Rs. {{ register.opening_cash|floatformat:2 }}</span>
+      </div>
+      <div class="summary-row">
+        <span>+ Today's Billed Cash Sales</span>
+        <span style="color:var(--primary); font-weight:600;">+ Rs. {{ cash_sales|floatformat:2 }}</span>
+      </div>
+      <div class="summary-row">
+        <span>+ Cash Added (Petty float in)</span>
+        <span>+ Rs. {{ register.cash_in|floatformat:2 }}</span>
+      </div>
+      <div class="summary-row">
+        <span>- Cash Taken Out (Shop expenses / tea)</span>
+        <span style="color:var(--danger);">- Rs. {{ register.cash_out|floatformat:2 }}</span>
+      </div>
+      <div class="summary-row total">
+        <span>Expected Cash in Drawer Now</span>
+        <span style="color:var(--primary); font-size:1.4rem;">Rs. {{ register.expected_closing|floatformat:2 }}</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:16px;">💸 Record Cash In / Out (Petty Cash)</h3>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="cash_in_out">
+        <div style="display:grid; grid-template-columns:1fr 1.2fr; gap:12px; margin-bottom:12px;">
+          <div class="field" style="margin:0;">
+            <label>Type</label>
+            <select name="entry_type">
+              <option value="in">➕ Cash In (Added to drawer)</option>
+              <option value="out">➖ Cash Out (Expense / Taken out)</option>
+            </select>
+          </div>
+          <div class="field" style="margin:0;">
+            <label>Amount (Rs.)</label>
+            <input type="number" name="amount" placeholder="0.00" min="1" step="0.01" required>
+          </div>
+        </div>
+        <div class="field">
+          <label>Reason / Note</label>
+          <input type="text" name="reason" placeholder="e.g. Chai / snacks, paid courier, bank change added">
+        </div>
+        <button type="submit" class="btn" style="width:100%;">Record Cash Entry</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card" style="border:1px solid rgba(239, 68, 68, 0.3);">
+    <h3 style="margin-bottom:12px;">🔒 Night / Shift End Cash Closure</h3>
+    <p style="font-size:0.86rem; color:var(--text-muted); margin-bottom:20px;">
+      Count all physical currency notes & coins in the cash drawer and enter below. System will automatically check for any mismatch (Shortage or Excess).
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="close">
+      <div class="field">
+        <label>Actual Physical Cash Counted (Rs.) *</label>
+        <input type="number" name="actual_closing" id="actual-closing-input" placeholder="Counted total" step="0.01" min="0" required>
+      </div>
+
+      <div style="margin-bottom:18px; padding:12px; background:var(--surface-hover); border-radius:var(--radius); font-size:0.88rem;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <span style="color:var(--text-muted);">Expected:</span>
+          <strong>Rs. {{ register.expected_closing|floatformat:2 }}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span style="color:var(--text-muted);">Calculated Difference:</span>
+          <strong id="diff-display" style="color:var(--text-muted);">Enter amount above</strong>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Closing Notes (Optional)</label>
+        <textarea name="notes" rows="2" placeholder="e.g. Rs. 10 difference due to change roundoff"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-danger" style="width:100%; padding:12px; font-size:0.95rem;" onclick="return confirm('Are you sure you want to close the drawer for today?');">
+        Close Cash Drawer for Today
+      </button>
+    </form>
+  </div>
+</div>
+
+{% else %}
+<div style="max-width:680px; margin:30px auto;">
+  <div class="card" style="padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:16px;">
+      <div>
+        <h3 style="margin:0;">✅ Register Closed for {{ register.date|date:"d M Y" }}</h3>
+        <div style="font-size:0.84rem; color:var(--text-muted); margin-top:2px;">Closed by {{ register.closed_by.username|default:"Owner" }} at {{ register.closed_at|date:"H:i" }}</div>
+      </div>
+      <span class="badge badge-danger">CLOSED</span>
+    </div>
+
+    <div class="summary-row">
+      <span>Opening Float</span>
+      <span>Rs. {{ register.opening_cash|floatformat:2 }}</span>
+    </div>
+    <div class="summary-row">
+      <span>Cash In / Out</span>
+      <span>+Rs. {{ register.cash_in|floatformat:2 }} / -Rs. {{ register.cash_out|floatformat:2 }}</span>
+    </div>
+    <div class="summary-row">
+      <span>Expected Cash Total</span>
+      <span>Rs. {{ register.expected_closing|floatformat:2 }}</span>
+    </div>
+    <div class="summary-row">
+      <span>Actual Physical Cash Counted</span>
+      <strong>Rs. {{ register.actual_closing|floatformat:2 }}</strong>
+    </div>
+    <div class="summary-row total">
+      <span>Final Discrepancy</span>
+      {% if register.discrepancy == 0 %}
+      <span style="color:var(--primary);">Exact Match (Rs. 0.00)</span>
+      {% elif register.discrepancy > 0 %}
+      <span style="color:var(--accent);">+ Rs. {{ register.discrepancy|floatformat:2 }} (Excess)</span>
+      {% else %}
+      <span style="color:var(--danger);">- Rs. {{ register.discrepancy|floatformat:2|slice:"1:" }} (Shortage)</span>
+      {% endif %}
+    </div>
+
+    {% if register.notes %}
+    <div style="margin-top:20px; padding:12px; background:var(--surface-hover); border-radius:var(--radius); font-size:0.88rem;">
+      <strong>Notes:</strong> {{ register.notes }}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const actualInput = document.getElementById('actual-closing-input');
+  const diffDisplay = document.getElementById('diff-display');
+  const expectedVal = parseFloat("{{ register.expected_closing|default:0 }}");
+
+  if (actualInput && diffDisplay) {
+    actualInput.addEventListener('input', function() {
+      const val = parseFloat(actualInput.value);
+      if (isNaN(val)) {
+        diffDisplay.textContent = 'Enter amount above';
+        diffDisplay.style.color = 'var(--text-muted)';
+        return;
+      }
+      const diff = val - expectedVal;
+      if (diff === 0) {
+        diffDisplay.textContent = 'Exact Match (Rs. 0.00)';
+        diffDisplay.style.color = 'var(--primary)';
+      } else if (diff > 0) {
+        diffDisplay.textContent = `+ Rs. ${diff.toFixed(2)} (Excess)`;
+        diffDisplay.style.color = 'var(--accent)';
+      } else {
+        diffDisplay.textContent = `- Rs. ${Math.abs(diff).toFixed(2)} (Shortage)`;
+        diffDisplay.style.color = 'var(--danger)';
+      }
+    });
+  }
+</script>
+{% endblock %}

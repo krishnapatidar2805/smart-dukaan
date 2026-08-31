@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Bills · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <div>
+    <h2>📄 Bill History & Sales Receipts</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem; margin-top:2px;">View generated invoices, receipts and customer purchases</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'billing:bill_return_list' %}" class="btn">🔄 Returns History</a>
+    <a href="{% url 'dashboard:export_sales_csv' %}" class="btn" title="Download Sales as CSV/Excel">📥 Export CSV</a>
+    <a href="{% url 'billing:bill_create' %}" class="btn btn-primary">+ New Bill</a>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:20px;">
+  <form method="get" style="display:flex; flex-wrap:wrap; gap:10px;">
+    <input type="text" name="q" value="{{ query }}" placeholder="Search by Bill #, customer name or phone..." style="flex:2; min-width:200px;">
+    <select name="payment_mode" style="flex:1; min-width:140px;">
+      <option value="">-- All Payment Modes --</option>
+      <option value="cash" {% if payment_filter == 'cash' %}selected{% endif %}>Cash</option>
+      <option value="upi" {% if payment_filter == 'upi' %}selected{% endif %}>UPI</option>
+      <option value="card" {% if payment_filter == 'card' %}selected{% endif %}>Card</option>
+      <option value="udhaar" {% if payment_filter == 'udhaar' %}selected{% endif %}>Udhaar (Credit)</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Search</button>
+    {% if query or payment_filter %}
+    <a href="{% url 'billing:bill_list' %}" class="btn">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+  {% if bills %}
+  <table>
+    <thead><tr><th>Bill #</th><th>Customer</th><th>Date</th><th>Payment</th><th>Total</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for b in bills %}
+      <tr>
+        <td><strong>#{{ b.id }}</strong></td>
+        <td>
+          <div><strong>{{ b.customer_name_snapshot|default:"Walk-in" }}</strong></div>
+          {% if b.customer_phone_snapshot %}<span style="font-size:0.8rem; color:var(--text-muted);">📞 {{ b.customer_phone_snapshot }}</span>{% endif %}
+        </td>
+        <td style="font-size:0.88rem; color:var(--text-muted);">{{ b.date|date:"d M Y, h:i A" }}</td>
+        <td>
+          <span class="badge" style="background:var(--surface-hover); border:1px solid var(--border);">{{ b.get_payment_mode_display }}</span>
+        </td>
+        <td><strong style="color:var(--primary); font-size:1rem;">Rs. {{ b.total_amount|floatformat:2 }}</strong></td>
+        <td>
+          {% if b.returns.all %}
+          <span class="badge badge-danger">Returned</span>
+          {% elif b.whatsapp_sent %}
+          <span class="badge badge-success">✓ WhatsApp</span>
+          {% else %}
+          <span class="badge badge-success">Completed</span>
+          {% endif %}
+        </td>
+        <td><a href="{% url 'billing:bill_detail' b.id %}" class="btn btn-sm">View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.has_other_pages %}
+  <div style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if payment_filter %}&payment_mode={{ payment_filter }}{% endif %}" class="btn btn-sm">← Previous</a>
+    {% endif %}
+    <span style="padding:6px 12px; font-size:0.88rem; color:var(--text-muted);">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if payment_filter %}&payment_mode={{ payment_filter }}{% endif %}" class="btn btn-sm">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <div style="font-size:2.5rem; margin-bottom:8px;">🧾</div>
+    <p>No bills found. Create your first bill!</p>
+    <a href="{% url 'billing:bill_create' %}" class="btn btn-primary" style="margin-top:12px;">+ Create New Bill</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

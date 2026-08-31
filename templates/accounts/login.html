@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Login · Smart Dukaan{% endblock %}
+{% block auth_content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div style="font-size: 2.2rem; margin-bottom: 8px;">🏪</div>
+    <h1>Smart Dukaan</h1>
+    <div class="sub">Sign in to manage your inventory, bills & store</div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="field">
+        <label>Username</label>
+        <input type="text" name="username" placeholder="Enter username" required autofocus autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%; padding: 12px 20px; font-size: 1rem; margin-top: 8px;">Sign In →</button>
+    </form>
+    <div style="margin-top:24px; text-align:center; font-size:0.9rem; color:var(--text-muted);">
+      New shop? <a href="{% url 'accounts:signup' %}" style="color:var(--primary); font-weight:700;">Create an account</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

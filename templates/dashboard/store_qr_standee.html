@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Printable Store QR Standee · {{ shop.name }}{% endblock %}
+{% block content %}
+<div class="no-print" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+  <div>
+    <a href="{% url 'dashboard:home' %}" style="color:var(--text-muted); font-size:0.85rem; text-decoration:none;">&larr; Back to Dashboard</a>
+    <h2 style="margin:4px 0 0 0;">📲 Counter QR Standee Flyer</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem;">Print and place on your shop billing counter so customers can self-order via WhatsApp</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'dashboard:public_storefront' shop.id %}" target="_blank" class="btn" style="border:1px solid rgba(16,185,129,0.4); color:var(--primary);">
+      🌐 Preview Customer Store
+    </a>
+    <button type="button" onclick="window.print();" class="btn btn-primary" style="padding:10px 20px;">
+      🖨️ Print Counter Standee (Ctrl + P)
+    </button>
+  </div>
+</div>
+
+<style>
+  .standee-container {
+    max-width: 520px;
+    margin: 0 auto 40px;
+    background: #ffffff;
+    color: #111827;
+    border: 3px solid #10b981;
+    border-radius: 24px;
+    padding: 40px 32px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    position: relative;
+    overflow: hidden;
+  }
+  .standee-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff;
+    padding: 16px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+  }
+  .standee-shop-name {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 900;
+    margin-bottom: 2px;
+  }
+  .standee-tagline {
+    font-size: 0.95rem;
+    opacity: 0.9;
+    font-weight: 600;
+  }
+  .qr-box {
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    border-radius: 18px;
+    padding: 24px;
+    display: inline-block;
+    margin: 16px 0;
+  }
+  .qr-image {
+    width: 220px;
+    height: 220px;
+    display: block;
+    margin: 0 auto;
+  }
+  .step-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: #ecfdf5;
+    color: #047857;
+    border-radius: 99px;
+    font-weight: 800;
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+  }
+  .standee-footer {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 16px;
+    margin-top: 20px;
+    font-size: 0.85rem;
+    color: #64748b;
+  }
+
+  @media print {
+    body { background: #ffffff !important; color: #000 !important; }
+    .no-print, .sidebar, .sidebar-footer, nav, header { display: none !important; }
+    .main { padding: 0 !important; margin: 0 !important; }
+    .app-shell { display: block !important; }
+    .standee-container {
+      border: 3px solid #000 !important;
+      box-shadow: none !important;
+      margin: 20px auto !important;
+      max-width: 90% !important;
+      page-break-inside: avoid;
+    }
+  }
+</style>
+
+<div class="standee-container">
+  <div class="standee-header">
+    <div class="standee-shop-name">🏪 {{ shop.name }}</div>
+    <div class="standee-tagline">🚀 Express Home Delivery & Self-Ordering</div>
+  </div>
+
+  <div class="step-badge">
+    📱 1. Scan QR &nbsp; ➔ &nbsp; 🛒 2. Select Items &nbsp; ➔ &nbsp; 💬 3. WhatsApp Order
+  </div>
+
+  <div class="qr-box">
+    <!-- Dynamic Real QR Code generation via quickchart API -->
+    <img src="https://quickchart.io/qr?text={{ store_url|urlencode }}&size=260&margin=1" alt="Store QR Code" class="qr-image">
+    <div style="font-size:0.75rem; color:#64748b; margin-top:8px; font-weight:700;">SCAN WITH ANY MOBILE CAMERA OR SCANNER</div>
+  </div>
+
+  <div style="font-size:1.1rem; font-weight:800; color:#111827; margin-bottom:4px;">
+    Order on WhatsApp & Get Delivery at your Doorstep!
+  </div>
+  <div style="font-size:0.88rem; color:#4b5563;">
+    No apps to install. Browse live prices and products right on your phone!
+  </div>
+
+  <div class="standee-footer">
+    📍 {{ shop.address|default:"Local Market" }} &nbsp;|&nbsp; 📞 WhatsApp: {{ shop_phone|default:"Counter Support" }}
+  </div>
+</div>
+{% endblock %}

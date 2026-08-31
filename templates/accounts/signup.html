@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Sign Up · Smart Dukaan{% endblock %}
+{% block auth_content %}
+<div class="auth-wrap">
+  <div class="auth-card" style="max-width:480px;">
+    <div style="font-size: 2.2rem; margin-bottom: 8px;">🏪</div>
+    <h1>Create Shop Account</h1>
+    <div class="sub">Set up your Smart Dukaan in under a minute</div>
+    <form method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <ul class="messages"><li class="error">{{ form.non_field_errors.0 }}</li></ul>
+      {% endif %}
+      <div class="field">
+        <label>Shop name</label>
+        {{ form.shop_name }}
+      </div>
+      <div class="field">
+        <label>Your name</label>
+        {{ form.owner_name }}
+      </div>
+      <div class="field">
+        <label>Username</label>
+        {{ form.username }}
+      </div>
+      <div class="field">
+        <label>Phone (optional)</label>
+        {{ form.phone }}
+      </div>
+      <div class="field">
+        <label>Password</label>
+        {{ form.password }}
+      </div>
+      <div class="field">
+        <label>Confirm Password</label>
+        {{ form.confirm_password }}
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Create Shop Account</button>
+    </form>
+    <div style="margin-top:18px; text-align:center; font-size:0.88rem; color:var(--text-muted);">
+      Already have an account? <a href="{% url 'accounts:login' %}" style="color:var(--primary); font-weight:600;">Login</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

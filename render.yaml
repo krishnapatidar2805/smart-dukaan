@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: smart-dukaan
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn smart_dukaan.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: USE_SQLITE
+        value: "True"

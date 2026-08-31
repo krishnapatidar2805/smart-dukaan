@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Inventory & Stock · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <div>
+    <h2>📦 Inventory & Stock Management</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem; margin-top:2px;">Track stock levels, AI restock predictions and product pricing</div>
+  </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <a href="{% url 'inventory:barcode_generator' %}" class="btn" style="border:1px solid rgba(99,102,241,0.4); color:var(--accent);" title="Generate printable barcode sticker sheets">🏷️ Print Barcodes</a>
+    <a href="{% url 'dashboard:export_inventory_csv' %}" class="btn" title="Download Product list as CSV/Excel">📥 Export CSV</a>
+    <a href="{% url 'purchases:purchase_create' %}" class="btn">📦 Restock Inward</a>
+    <a href="{% url 'inventory:product_add' %}" class="btn btn-primary">+ Add Product</a>
+  </div>
+</div>
+
+<div class="stat-grid" style="margin-bottom:20px;">
+  <div class="card stat-card">
+    <div class="stat-label">Total Active Products</div>
+    <div class="stat-value">{{ total_products }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">🔮 AI Reorder Alert (&le; 5 Days Stock)</div>
+    <div class="stat-value {% if critical_reorder_count > 0 %}danger{% else %}primary{% endif %}">
+      {{ critical_reorder_count }} items
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:20px;">
+  <form method="get" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+    <input type="text" name="q" placeholder="Search product name or category..." value="{{ query }}" style="flex:2; min-width:200px;">
+    
+    <select name="category" style="flex:1; min-width:140px;">
+      <option value="">-- All Categories --</option>
+      {% for c in categories %}
+        {% if c %}<option value="{{ c }}" {% if c == selected_category %}selected{% endif %}>{{ c }}</option>{% endif %}
+      {% endfor %}
+    </select>
+
+    <select name="stock_filter" style="flex:1; min-width:160px;">
+      <option value="">-- All Stock Status --</option>
+      <option value="reorder" {% if stock_filter == 'reorder' %}selected{% endif %}>🚨 Reorder Soon (&le;5 days)</option>
+      <option value="low" {% if stock_filter == 'low' %}selected{% endif %}>⚠️ Low Stock Threshold</option>
+    </select>
+
+    <button type="submit" class="btn btn-primary">Filter</button>
+    {% if query or selected_category or stock_filter %}
+    <a href="{% url 'inventory:product_list' %}" class="btn">Reset</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+  {% if products %}
+  <table>
+    <thead>
+      <tr>
+        <th>Product Name</th>
+        <th>Category</th>
+        <th>Cost Price</th>
+        <th>Selling Price</th>
+        <th>Stock Qty</th>
+        <th>🔮 AI Restock Prediction</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+      <tr>
+        <td>
+          <strong>{{ p.name }}</strong>
+          {% if p.expiry_date %}
+          <div style="font-size:0.75rem; color:var(--text-muted);">Exp: {{ p.expiry_date|date:"d M Y" }}</div>
+          {% endif %}
+        </td>
+        <td><span class="badge" style="background:var(--surface-hover); border:1px solid var(--border);">{{ p.category|default:"General" }}</span></td>
+        <td>Rs. {{ p.cost_price|floatformat:2 }}</td>
+        <td><strong>Rs. {{ p.selling_price|floatformat:2 }}</strong></td>
+        <td>
+          <strong>{{ p.stock_qty }}</strong> <span style="font-size:0.8rem; color:var(--text-muted);">{{ p.get_unit_display }}</span>
+        </td>
+        <td>
+          {% if p.days_left is not None %}
+            {% if p.days_left <= 5 %}
+            <span class="badge badge-danger" title="Avg {{ p.daily_rate }} {{ p.unit }}/day (Last 30d: {{ p.sold_30d }} sold)">
+              🚨 Runs out in ~{{ p.days_left }} days
+            </span>
+            {% elif p.days_left <= 15 %}
+            <span class="badge" style="background:var(--accent-light); color:var(--accent);" title="Avg {{ p.daily_rate }} {{ p.unit }}/day">
+              ⚡ ~{{ p.days_left }} days left
+            </span>
+            {% else %}
+            <span class="badge badge-success" title="Avg {{ p.daily_rate }} {{ p.unit }}/day">
+              ✓ ~{{ p.days_left }} days stock
+            </span>
+            {% endif %}
+          {% else %}
+            {% if p.is_low_stock %}
+            <span class="badge badge-danger">⚠️ Low Stock ({{ p.stock_qty }} left)</span>
+            {% else %}
+            <span class="badge" style="background:var(--surface-hover); color:var(--text-muted);">Adequate Stock</span>
+            {% endif %}
+          {% endif %}
+        </td>
+        <td style="text-align:right; white-space:nowrap;">
+          <a href="{% url 'inventory:product_barcode' p.id %}" class="btn btn-sm" title="Print Barcode Stickers">🏷️ Barcode</a>
+          <a href="{% url 'inventory:product_edit' p.id %}" class="btn btn-sm">Edit</a>
+          {% if p.expiry_date %}
+          <form method="post" action="{% url 'inventory:apply_clearance_discount' p.id %}" style="display:inline;" onsubmit="return confirm('Apply 20% Clearance Discount on {{ p.name }}?');">
+            {% csrf_token %}
+            <input type="hidden" name="discount" value="20">
+            <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.15); color:var(--danger); border:1px solid rgba(239,68,68,0.3);" title="Reduce selling price by 20% to clear stock fast">⚡ -20% Sale</button>
+          </form>
+          {% endif %}
+          <a href="{% url 'inventory:product_delete' p.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Delete {{ p.name }}?')">Delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.has_other_pages %}
+  <div style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if stock_filter %}&stock_filter={{ stock_filter }}{% endif %}" class="btn btn-sm">← Previous</a>
+    {% endif %}
+    <span style="padding:6px 12px; font-size:0.88rem; color:var(--text-muted);">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if stock_filter %}&stock_filter={{ stock_filter }}{% endif %}" class="btn btn-sm">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <div style="font-size:2.5rem; margin-bottom:8px;">📦</div>
+    <p>No products found matching your filters. <a href="{% url 'inventory:product_add' %}" style="color:var(--primary); font-weight:700;">Add a new product</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

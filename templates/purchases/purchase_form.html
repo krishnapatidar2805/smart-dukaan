@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}New Purchase Order · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <div>
+    <a href="{% url 'purchases:purchase_list' %}" style="color:var(--text-muted); font-size:0.88rem;">← Back to Purchase Orders</a>
+    <h2 style="margin-top:4px;">📦 New Purchase Order (Stock Inward)</h2>
+  </div>
+  <a href="{% url 'purchases:supplier_add' %}" class="btn">+ Add New Supplier</a>
+</div>
+
+<form method="post" id="purchase-form">
+  {% csrf_token %}
+  <input type="hidden" name="items_json" id="items-json-input" value="[]">
+
+  <div class="billing-grid">
+    <div>
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:16px;">1. Supplier & Invoice Details</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="field">
+            <label>Select Supplier *</label>
+            <select name="supplier_id" required>
+              <option value="">-- Choose Supplier --</option>
+              {% for s in suppliers %}
+              <option value="{{ s.id }}">{{ s.name }} ({{ s.company_name|default:s.phone }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Supplier Invoice / Bill No.</label>
+            <input type="text" name="invoice_no" placeholder="e.g. INV-2026-9812">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:16px;">2. Add Stock Items</h3>
+        <div style="display:flex; gap:10px; margin-bottom:16px;">
+          <select id="product-select" style="flex:2;">
+            <option value="">-- Select Product --</option>
+            {% for p in products %}
+            <option value="{{ p.id }}" data-name="{{ p.name }}" data-cost="{{ p.cost_price }}" data-unit="{{ p.get_unit_display }}">
+              {{ p.name }} (Current Cost: Rs. {{ p.cost_price }})
+            </option>
+            {% endfor %}
+          </select>
+          <input type="number" id="item-qty" placeholder="Qty" min="1" value="10" style="flex:0.8;">
+          <input type="number" id="item-cost" placeholder="Cost Price (Rs.)" step="0.01" style="flex:1;">
+          <button type="button" class="btn btn-primary" id="btn-add-item">Add</button>
+        </div>
+
+        <div id="cart-container">
+          <table style="width:100%;">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Unit Cost</th>
+                <th>Subtotal</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="cart-tbody">
+              <tr>
+                <td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">
+                  No products added yet. Select a product above to add to stock.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h3 style="margin-bottom:16px;">3. Payment & Settlement</h3>
+        <div class="summary-row">
+          <span>Subtotal Items</span>
+          <span id="summary-items-count">0 items</span>
+        </div>
+        <div class="summary-row total">
+          <span>Total Purchase Amount</span>
+          <span id="summary-total" style="color:var(--primary);">Rs. 0.00</span>
+        </div>
+
+        <div class="field" style="margin-top:20px;">
+          <label>Amount Paid to Supplier Now (Rs.)</label>
+          <input type="number" name="paid_amount" id="paid-amount" value="0" min="0" step="0.01">
+          <span style="font-size:0.78rem; color:var(--text-muted);">
+            If full amount is not paid, remaining balance will be added to supplier's due ledger.
+          </span>
+        </div>
+
+        <div class="summary-row" style="color:var(--danger); font-weight:700; margin-bottom:16px;">
+          <span>Remaining Balance Due</span>
+          <span id="summary-due">Rs. 0.00</span>
+        </div>
+
+        <div class="field">
+          <label>Notes / Remarks (Optional)</label>
+          <textarea name="notes" rows="2" placeholder="e.g. Batch #401, arrived via truck delivery"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:14px; font-size:1rem;">
+          Save Purchase & Update Stock →
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let cart = [];
+  const productSelect = document.getElementById('product-select');
+  const itemQty = document.getElementById('item-qty');
+  const itemCost = document.getElementById('item-cost');
+  const btnAddItem = document.getElementById('btn-add-item');
+  const cartTbody = document.getElementById('cart-tbody');
+  const itemsJsonInput = document.getElementById('items-json-input');
+  const summaryItemsCount = document.getElementById('summary-items-count');
+  const summaryTotal = document.getElementById('summary-total');
+  const paidAmountInput = document.getElementById('paid-amount');
+  const summaryDue = document.getElementById('summary-due');
+
+  productSelect.addEventListener('change', function() {
+    const selected = productSelect.options[productSelect.selectedIndex];
+    if (selected && selected.value) {
+      itemCost.value = selected.getAttribute('data-cost') || '';
+    }
+  });
+
+  btnAddItem.addEventListener('click', function() {
+    const selected = productSelect.options[productSelect.selectedIndex];
+    if (!selected || !selected.value) {
+      alert('Please choose a product.');
+      return;
+    }
+    const productId = selected.value;
+    const productName = selected.getAttribute('data-name');
+    const qty = parseInt(itemQty.value) || 1;
+    const cost = parseFloat(itemCost.value) || 0;
+
+    if (qty <= 0) {
+      alert('Quantity must be greater than 0.');
+      return;
+    }
+
+    const existingIndex = cart.findIndex(item => item.product_id === productId);
+    if (existingIndex > -1) {
+      cart[existingIndex].qty += qty;
+      cart[existingIndex].unit_cost = cost;
+    } else {
+      cart.push({
+        product_id: productId,
+        name: productName,
+        qty: qty,
+        unit_cost: cost
+      });
+    }
+
+    renderCart();
+  });
+
+  function removeCartItem(index) {
+    cart.splice(index, 1);
+    renderCart();
+  }
+
+  function renderCart() {
+    if (cart.length === 0) {
+      cartTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">No products added yet. Select a product above to add to stock.</td></tr>';
+      summaryItemsCount.textContent = '0 items';
+      summaryTotal.textContent = 'Rs. 0.00';
+      summaryDue.textContent = 'Rs. 0.00';
+      itemsJsonInput.value = '[]';
+      return;
+    }
+
+    let total = 0;
+    let html = '';
+    cart.forEach((item, index) => {
+      const subtotal = item.qty * item.unit_cost;
+      total += subtotal;
+      html += `
+        <tr>
+          <td><strong>${item.name}</strong></td>
+          <td>${item.qty}</td>
+          <td>Rs. ${item.unit_cost.toFixed(2)}</td>
+          <td><strong>Rs. ${subtotal.toFixed(2)}</strong></td>
+          <td><button type="button" onclick="removeCartItem(${index})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-weight:700;">✕</button></td>
+        </tr>
+      `;
+    });
+
+    cartTbody.innerHTML = html;
+    summaryItemsCount.textContent = `${cart.length} product(s)`;
+    summaryTotal.textContent = `Rs. ${total.toFixed(2)}`;
+    itemsJsonInput.value = JSON.stringify(cart);
+
+    updateDue(total);
+  }
+
+  function updateDue(total) {
+    const paid = parseFloat(paidAmountInput.value) || 0;
+    const due = Math.max(0, total - paid);
+    summaryDue.textContent = `Rs. ${due.toFixed(2)}`;
+  }
+
+  paidAmountInput.addEventListener('input', function() {
+    let total = 0;
+    cart.forEach(item => total += (item.qty * item.unit_cost));
+    updateDue(total);
+  });
+
+  window.removeCartItem = removeCartItem;
+</script>
+{% endblock %}

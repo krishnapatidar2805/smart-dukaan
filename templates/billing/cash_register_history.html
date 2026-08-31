@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Cash Register Closure History · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+  <div>
+    <h2>📜 Daily Drawer Closure History</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem; margin-top:2px;">
+      Log of daily cash reconciliation and shortage/excess audit reports
+    </div>
+  </div>
+  <a href="{% url 'billing:cash_register' %}" class="btn btn-primary">← Today's Drawer</a>
+</div>
+
+<div class="card">
+  {% if registers %}
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Opened By</th>
+        <th>Opening Float</th>
+        <th>Expected Closing</th>
+        <th>Actual Counted</th>
+        <th>Discrepancy</th>
+        <th>Status</th>
+        <th>Closed At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in registers %}
+      <tr>
+        <td><strong>{{ r.date|date:"d M Y" }}</strong></td>
+        <td>{{ r.opened_by.username|default:"—" }}</td>
+        <td>Rs. {{ r.opening_cash|floatformat:2 }}</td>
+        <td>Rs. {{ r.expected_closing|floatformat:2 }}</td>
+        <td>
+          {% if r.actual_closing is not None %}
+          <strong>Rs. {{ r.actual_closing|floatformat:2 }}</strong>
+          {% else %}
+          —
+          {% endif %}
+        </td>
+        <td>
+          {% if r.status == 'closed' %}
+            {% if r.discrepancy == 0 %}
+            <span class="badge badge-success">Match (Rs. 0)</span>
+            {% elif r.discrepancy > 0 %}
+            <span class="badge" style="background:var(--accent-light); color:var(--accent);">+ Rs. {{ r.discrepancy|floatformat:2 }}</span>
+            {% else %}
+            <span class="badge badge-danger">- Rs. {{ r.discrepancy|floatformat:2|slice:"1:" }} (Short)</span>
+            {% endif %}
+          {% else %}
+          <span style="color:var(--text-muted);">In Progress</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if r.status == 'open' %}
+          <span class="badge badge-success">Open</span>
+          {% else %}
+          <span class="badge badge-danger">Closed</span>
+          {% endif %}
+        </td>
+        <td style="font-size:0.84rem; color:var(--text-muted);">
+          {{ r.closed_at|date:"d M, H:i"|default:"—" }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.has_other_pages %}
+  <div style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm">← Previous</a>
+    {% endif %}
+    <span style="padding:6px 12px; font-size:0.88rem; color:var(--text-muted);">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <div style="font-size:2.5rem; margin-bottom:8px;">💰</div>
+    <p>No drawer closures recorded yet. Open your first daily cash register!</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

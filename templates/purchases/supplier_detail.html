@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}{{ supplier.name }} · Supplier Ledger · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="margin-bottom:20px;">
+  <a href="{% url 'purchases:supplier_list' %}" style="color:var(--text-muted); font-size:0.88rem;">← Back to Suppliers</a>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+    <div>
+      <h2>🏢 {{ supplier.name }}</h2>
+      <div style="color:var(--text-muted); font-size:0.9rem;">
+        {{ supplier.company_name|default:"Independent Distributor" }} · 📞 {{ supplier.phone }} {% if supplier.address %}· 📍 {{ supplier.address }}{% endif %}
+      </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <a href="{% url 'purchases:supplier_edit' supplier.id %}" class="btn">Edit Details</a>
+      <a href="{% url 'purchases:purchase_create' %}" class="btn btn-primary">+ Record Purchase</a>
+    </div>
+  </div>
+</div>
+
+<div class="stat-grid" style="margin-bottom:24px;">
+  <div class="card stat-card">
+    <div class="stat-label">Outstanding Payable Balance</div>
+    <div class="stat-value {% if supplier.balance_owed > 0 %}danger{% else %}primary{% endif %}">
+      Rs. {{ supplier.balance_owed|floatformat:2 }}
+    </div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Total Invoices</div>
+    <div class="stat-value">{{ purchases.count }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Total Payments Made</div>
+    <div class="stat-value">{{ payments.count }}</div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1.4fr 1fr; gap:20px; align-items:start;">
+  <div>
+    <div class="card" style="margin-bottom:24px;">
+      <h3 style="margin-bottom:16px;">📦 Purchase Orders / Stock Invoices</h3>
+      {% if purchases %}
+      <table>
+        <thead>
+          <tr>
+            <th>PO #</th>
+            <th>Date</th>
+            <th>Invoice #</th>
+            <th>Total Amount</th>
+            <th>Paid</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in purchases %}
+          <tr>
+            <td><strong>#{{ p.id }}</strong></td>
+            <td>{{ p.date|date:"d M Y" }}</td>
+            <td>{{ p.invoice_no|default:"—" }}</td>
+            <td>Rs. {{ p.total_amount|floatformat:2 }}</td>
+            <td>Rs. {{ p.paid_amount|floatformat:2 }}</td>
+            <td>
+              {% if p.payment_status == 'paid' %}
+              <span class="badge badge-success">Paid</span>
+              {% elif p.payment_status == 'partial' %}
+              <span class="badge badge-danger">Partial</span>
+              {% else %}
+              <span class="badge badge-danger">Pending</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'purchases:purchase_detail' p.id %}" class="btn btn-sm">View</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state" style="padding:24px;">No purchase orders recorded yet for this supplier.</div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:16px;">💰 Payment Settlement History</h3>
+      {% if payments %}
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount Paid</th>
+            <th>Payment Mode</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pay in payments %}
+          <tr>
+            <td>{{ pay.date|date:"d M Y H:i" }}</td>
+            <td><strong style="color:var(--primary);">Rs. {{ pay.amount|floatformat:2 }}</strong></td>
+            <td><span class="badge badge-success">{{ pay.get_payment_mode_display }}</span></td>
+            <td style="color:var(--text-muted); font-size:0.85rem;">{{ pay.note|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state" style="padding:24px;">No payments recorded yet.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:16px;">💵 Record Payment to Supplier</h3>
+    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">
+      Enter the amount paid to {{ supplier.name }} to reduce outstanding dues.
+    </p>
+    <form method="post" action="{% url 'purchases:supplier_payment_add' supplier.id %}">
+      {% csrf_token %}
+      <div class="field">
+        <label>Amount Paid (Rs.) *</label>
+        {{ payment_form.amount }}
+      </div>
+      <div class="field">
+        <label>Payment Method</label>
+        {{ payment_form.payment_mode }}
+      </div>
+      <div class="field">
+        <label>Note / Reference (Optional)</label>
+        {{ payment_form.note }}
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Record Payment →</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

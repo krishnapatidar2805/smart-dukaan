@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Barcode & Price Tag Generator · Smart Dukaan{% endblock %}
+{% block content %}
+<div class="no-print" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+  <div>
+    <a href="{% url 'inventory:product_list' %}" style="color:var(--text-muted); font-size:0.85rem; text-decoration:none;">&larr; Back to Inventory</a>
+    <h2 style="margin:4px 0 0 0;">🏷️ Printable Barcode & Price Tag Stickers</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem;">Ready-to-print sticker sheets for retail packaging & barcode scanners</div>
+  </div>
+
+  <div style="display:flex; gap:10px; align-items:center;">
+    <form method="get" style="display:flex; gap:8px; align-items:center;">
+      <select name="product_id" onchange="this.form.submit();" style="padding:8px 12px; font-size:0.85rem;">
+        <option value="">-- All Products (Sheet) --</option>
+        {% for p in products %}
+        <option value="{{ p.id }}" {% if selected_id == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="count" onchange="this.form.submit();" style="padding:8px 12px; font-size:0.85rem; width:100px;">
+        <option value="6" {% if count == 6 %}selected{% endif %}>6 stickers</option>
+        <option value="12" {% if count == 12 %}selected{% endif %}>12 stickers</option>
+        <option value="24" {% if count == 24 %}selected{% endif %}>24 stickers</option>
+        <option value="40" {% if count == 40 %}selected{% endif %}>40 stickers</option>
+      </select>
+    </form>
+
+    <button type="button" onclick="window.print();" class="btn btn-primary" style="padding:9px 18px; font-size:0.9rem;">
+      🖨️ Print Stickers (Ctrl + P)
+    </button>
+  </div>
+</div>
+
+<style>
+  .sticker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .sticker-card {
+    background: #ffffff;
+    color: #111827;
+    border: 1px dashed #d1d5db;
+    border-radius: 6px;
+    padding: 10px 8px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 140px;
+  }
+
+  .sticker-shop {
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #4b5563;
+    margin-bottom: 2px;
+  }
+
+  .sticker-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.2;
+    margin-bottom: 4px;
+    max-height: 2.4em;
+    overflow: hidden;
+  }
+
+  .sticker-price {
+    font-size: 1.05rem;
+    font-weight: 900;
+    color: #047857;
+    margin-top: 4px;
+  }
+
+  .sticker-barcode-svg {
+    max-width: 100%;
+    height: 38px;
+  }
+
+  @media print {
+    body {
+      background: #ffffff !important;
+      color: #000000 !important;
+      padding: 0 !important;
+    }
+    .no-print, .sidebar, .sidebar-footer, nav, header {
+      display: none !important;
+    }
+    .main {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    .app-shell {
+      display: block !important;
+    }
+    .sticker-grid {
+      grid-template-columns: repeat(4, 1fr) !important;
+      gap: 8px !important;
+    }
+    .sticker-card {
+      border: 1px dashed #9ca3af !important;
+      page-break-inside: avoid;
+    }
+  }
+</style>
+
+<div class="sticker-grid">
+  {% for s in stickers %}
+  <div class="sticker-card">
+    <div class="sticker-shop">{{ s.shop_name }}</div>
+    <div class="sticker-name" title="{{ s.name }}">{{ s.name }}</div>
+    <svg class="sticker-barcode-svg" data-barcode="{{ s.barcode }}"></svg>
+    <div class="sticker-price">Rs. {{ s.price|floatformat:2 }}</div>
+  </div>
+  {% empty %}
+  <div class="empty-state" style="grid-column: 1 / -1;">No products found to generate barcodes.</div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll(".sticker-barcode-svg").forEach(svg => {
+      const code = svg.getAttribute("data-barcode") || "10001";
+      try {
+        JsBarcode(svg, code, {
+          format: "CODE128",
+          width: 1.4,
+          height: 32,
+          displayValue: true,
+          fontSize: 10,
+          margin: 2,
+          fontOptions: "bold"
+        });
+      } catch (e) {
+        console.error("Barcode generation error:", e);
+      }
+    });
+  });
+</script>
+{% endblock %}

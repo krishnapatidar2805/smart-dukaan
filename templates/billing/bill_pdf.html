@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #1a1d1a; }
+  h1 { font-size: 20px; margin-bottom: 0; color: #2f6b4f; }
+  .sub { color: #6b7268; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e2e4df; }
+  th { background: #f0f1ee; font-size: 11px; text-transform: uppercase; }
+  .totals { margin-top: 16px; width: 260px; float: right; }
+  .totals div { display: flex; justify-content: space-between; padding: 4px 0; }
+  .totals .grand { font-weight: bold; font-size: 15px; border-top: 1px solid #1a1d1a; padding-top: 8px; }
+  .footer { margin-top: 60px; text-align: center; color: #6b7268; font-size: 11px; }
+</style>
+</head>
+<body>
+  <h1>{{ bill.shop.name }}</h1>
+  <div class="sub">
+    Bill #{{ bill.id }} &nbsp;·&nbsp; {{ bill.date|date:"d M Y, h:i A" }}<br>
+    {% if bill.customer_name_snapshot %}Customer: {{ bill.customer_name_snapshot }} ({{ bill.customer_phone_snapshot }}){% endif %}
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+    </thead>
+    <tbody>
+      {% for item in bill.items.all %}
+      <tr>
+        <td>{{ item.product_name_snapshot }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>Rs. {{ item.price_at_sale }}</td>
+        <td>Rs. {{ item.line_total }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div><span>Subtotal</span><span>Rs. {{ bill.subtotal }}</span></div>
+    <div><span>Discount</span><span>- Rs. {{ bill.discount }}</span></div>
+    <div><span>GST ({{ bill.gst_percent }}%)</span><span>+ Rs. {{ bill.gst_amount }}</span></div>
+    <div class="grand"><span>Total</span><span>Rs. {{ bill.total_amount }}</span></div>
+  </div>
+
+  <div class="footer">Thank you for shopping with us! · Payment mode: {{ bill.get_payment_mode_display }}</div>
+</body>
+</html>

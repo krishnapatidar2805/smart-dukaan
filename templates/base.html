@@ -1,0 +1,105 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Smart Dukaan{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=4">
+  <script>
+    (function() {
+      var saved = localStorage.getItem("dukaan-theme") || "light";
+      document.documentElement.setAttribute("data-theme", saved);
+    })();
+  </script>
+</head>
+<body>
+  {% if user.is_authenticated %}
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">🏪 Smart Dukaan</div>
+      <div class="brand-sub">{{ user.profile.shop.name }}</div>
+
+      <a href="{% url 'dashboard:home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">📊 Dashboard</a>
+      <a href="{% url 'inventory:product_list' %}" class="nav-link {% if 'inventory' in request.path %}active{% endif %}">📦 Inventory</a>
+      <a href="{% url 'billing:bill_create' %}" class="nav-link {% if request.path == '/billing/new/' %}active{% endif %}">🧾 New Bill</a>
+      <a href="{% url 'billing:bill_list' %}" class="nav-link {% if request.path == '/billing/' %}active{% endif %}">📄 Bill History</a>
+      <a href="{% url 'billing:bill_return_list' %}" class="nav-link {% if 'returns' in request.path or 'return' in request.path %}active{% endif %}">🔄 Returns</a>
+      <a href="{% url 'purchases:supplier_list' %}" class="nav-link {% if 'purchases' in request.path %}active{% endif %}">🏢 Purchases & Suppliers</a>
+      <a href="{% url 'udhaar:customer_list' %}" class="nav-link {% if 'udhaar' in request.path %}active{% endif %}">💳 Udhaar (Credit)</a>
+      <a href="{% url 'billing:cash_register' %}" class="nav-link {% if 'cash-register' in request.path %}active{% endif %}">💰 Cash Register</a>
+      {% if user.profile.shop %}
+      <a href="{% url 'dashboard:store_qr_standee' user.profile.shop.id %}" class="nav-link {% if 'qr' in request.path %}active{% endif %}">🌐 Online Store & QR</a>
+      {% endif %}
+      <a href="{% url 'dashboard:ai_chat' %}" class="nav-link {% if 'assistant' in request.path %}active{% endif %}">🤖 AI Assistant</a>
+      {% if user.profile.role == 'owner' %}
+      <a href="{% url 'accounts:staff_list' %}" class="nav-link {% if 'staff' in request.path %}active{% endif %}">👥 Staff</a>
+      <a href="{% url 'accounts:audit_log' %}" class="nav-link {% if 'audit-log' in request.path %}active{% endif %}">📜 Activity Log</a>
+      {% endif %}
+
+      <div class="sidebar-footer">
+        <div style="font-size:0.82rem; color:var(--text-muted); padding: 0 8px 8px;">{{ user.first_name|default:user.username }} · {{ user.profile.role|title }}</div>
+        <a href="{% url 'accounts:logout' %}" class="nav-link">🚪 Logout</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button type="button" id="btn-command-palette-trigger" class="btn" style="padding:6px 14px; font-size:0.84rem; display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); color:var(--text-muted); cursor:pointer;">
+            <span>🔍 Quick Search or Command...</span>
+            <kbd style="padding:2px 6px; font-size:0.75rem; background:var(--surface-hover); border:1px solid var(--border); border-radius:4px;">Ctrl + K</kbd>
+          </button>
+          <span class="badge badge-success" style="font-size:0.78rem; display:inline-flex; align-items:center; gap:4px;">
+            <span style="width:6px; height:6px; border-radius:50%; background:#10b981; display:inline-block;"></span> Store Active
+          </span>
+        </div>
+        <button class="theme-toggle" id="theme-toggle-btn" title="Toggle dark/light mode">🌙</button>
+      </div>
+
+      {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <!-- Global Command Palette Modal (Ctrl + K) -->
+  <div id="command-palette-modal">
+    <div class="command-palette-box">
+      <div class="command-search-header">
+        <span style="font-size:1.2rem;">🔍</span>
+        <input type="text" id="command-palette-input" placeholder="Type a page, command, or action (e.g. Bill, Stock, Cash)...">
+        <kbd style="padding:2px 6px; font-size:0.75rem; background:var(--surface-hover); border:1px solid var(--border); border-radius:4px; color:var(--text-muted);">ESC</kbd>
+      </div>
+      <div id="command-palette-results"></div>
+    </div>
+  </div>
+
+  {% else %}
+    <div style="position:fixed; top:20px; right:20px; z-index:100;">
+      <button class="theme-toggle" id="theme-toggle-btn" title="Toggle dark/light mode">🌙</button>
+    </div>
+    {% if messages %}
+    <ul class="messages" style="max-width:440px; margin:20px auto 0;">
+      {% for message in messages %}
+      <li class="{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% block auth_content %}{% endblock %}
+  {% endif %}
+
+  <script src="{% static 'js/theme.js' %}"></script>
+  <script src="{% static 'js/command_palette.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

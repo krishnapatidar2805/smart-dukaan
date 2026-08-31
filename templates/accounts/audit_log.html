@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Activity Log & Audit Trail · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+  <div>
+    <h2>📜 Activity Log (Audit Trail)</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem; margin-top:2px;">
+      Track staff actions, inventory edits, sales, returns and cash register closures (Owner Only)
+    </div>
+  </div>
+  {% if logs %}
+  <form method="post" action="{% url 'accounts:audit_log_clear' %}" onsubmit="return confirm('Kya aap sach me saare puraane Activity Logs permanently delete karna chahte hain?');">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger" style="padding:8px 16px; font-size:0.85rem;">🗑️ Clear All Logs</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-bottom:20px;">
+  <form method="get" style="display:flex; flex-wrap:wrap; gap:10px;">
+    <select name="module" style="flex:1; min-width:140px;">
+      <option value="">-- All Modules --</option>
+      {% for code, name in modules %}
+      <option value="{{ code }}" {% if module_filter == code %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="action" style="flex:1; min-width:140px;">
+      <option value="">-- All Actions --</option>
+      {% for code, name in actions %}
+      <option value="{{ code }}" {% if action_filter == code %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="user" style="flex:1; min-width:140px;">
+      <option value="">-- All Users / Staff --</option>
+      {% for u in staff_users %}
+      <option value="{{ u.user.username }}" {% if user_filter == u.user.username %}selected{% endif %}>{{ u.user.username }} ({{ u.role }})</option>
+      {% endfor %}
+    </select>
+
+    <input type="text" name="q" value="{{ query }}" placeholder="Search details or item..." style="flex:2; min-width:180px;">
+    
+    <button type="submit" class="btn btn-primary">Filter</button>
+    {% if module_filter or action_filter or user_filter or query %}
+    <a href="{% url 'accounts:audit_log' %}" class="btn">Reset</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+  {% if logs %}
+  <table>
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>User</th>
+        <th>Module</th>
+        <th>Action</th>
+        <th>Target Item</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td style="white-space:nowrap; color:var(--text-muted); font-size:0.84rem;">
+          {{ log.timestamp|date:"d M Y, H:i:s" }}
+        </td>
+        <td>
+          <strong>{{ log.user.username|default:"System / Unknown" }}</strong>
+          {% if log.user.profile %}
+          <span style="font-size:0.75rem; color:var(--text-muted);">({{ log.user.profile.role }})</span>
+          {% endif %}
+        </td>
+        <td><span class="badge" style="background:var(--surface-hover); border:1px solid var(--border);">{{ log.get_module_display }}</span></td>
+        <td>
+          {% if log.action == 'create' %}
+          <span class="badge badge-success">Created</span>
+          {% elif log.action == 'delete' or log.action == 'return' %}
+          <span class="badge badge-danger">{{ log.get_action_display }}</span>
+          {% elif log.action == 'payment' %}
+          <span class="badge badge-success">Payment</span>
+          {% else %}
+          <span class="badge" style="background:var(--primary-light); color:var(--primary);">{{ log.get_action_display }}</span>
+          {% endif %}
+        </td>
+        <td><strong>{{ log.object_repr }}</strong></td>
+        <td style="font-size:0.86rem; color:var(--text-muted);">{{ log.details|default:"—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.has_other_pages %}
+  <div style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if module_filter %}&module={{ module_filter }}{% endif %}{% if action_filter %}&action={{ action_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm">← Previous</a>
+    {% endif %}
+    <span style="padding:6px 12px; font-size:0.88rem; color:var(--text-muted);">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if module_filter %}&module={{ module_filter }}{% endif %}{% if action_filter %}&action={{ action_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <div style="font-size:2.5rem; margin-bottom:8px;">📜</div>
+    <p>No audit activity found for the selected filters.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

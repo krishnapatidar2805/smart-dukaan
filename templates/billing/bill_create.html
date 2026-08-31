@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Smart POS & Billing Terminal · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+  <div>
+    <h2>🛍️ Smart POS Terminal</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem;">Visual touch billing with live UPI QR, barcode scanner & loyalty rewards</div>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <button type="button" id="btn-voice-search" class="btn" title="Speak product name"><span style="font-size:1.1rem;">🎙️</span> Voice Search</button>
+    <button type="button" id="btn-toggle-view" class="btn"><span style="font-size:1.1rem;">🔲</span> Toggle Grid/List</button>
+  </div>
+</div>
+
+<form method="post" id="bill-form">
+  {% csrf_token %}
+  <div class="billing-grid">
+    <!-- Left Column: Product Selection & Visual Touch POS -->
+    <div>
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <input type="text" id="pos-search-input" placeholder="🔍 Search product or barcode..." style="flex:2; min-width:180px;" autofocus>
+          <select id="product-select" style="flex:2; min-width:180px;">
+            <option value="">-- Or Pick from List --</option>
+            {% for p in products %}
+            <option value="{{ p.id }}" data-price="{{ p.selling_price }}" data-name="{{ p.name }}" data-stock="{{ p.stock_qty }}" data-category="{{ p.category }}" data-unit="{{ p.get_unit_display }}">
+              {{ p.name }} — Rs.{{ p.selling_price }} ({{ p.stock_qty }} {{ p.unit }} left)
+            </option>
+            {% endfor %}
+          </select>
+          <input type="number" id="qty-input" value="1" min="1" style="width:70px;" title="Quantity">
+          <button type="button" id="add-item-btn" class="btn btn-primary" style="padding:10px 18px;">+ Add to Cart</button>
+        </div>
+
+        <!-- Category Filter Pills -->
+        <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:8px;" id="category-pills-bar">
+          <button type="button" class="pos-cat-pill active" data-cat="all">All Items</button>
+          {% for c in categories %}
+          <button type="button" class="pos-cat-pill" data-cat="{{ c }}">{{ c }}</button>
+          {% endfor %}
+        </div>
+
+        <!-- Visual Touch POS Grid -->
+        <div id="pos-touch-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:10px; max-height:280px; overflow-y:auto; margin-top:10px; padding:4px;">
+          {% for p in products %}
+          <div class="pos-tile {% if p.stock_qty <= 0 %}out-of-stock{% endif %}" data-id="{{ p.id }}" data-name="{{ p.name }}" data-price="{{ p.selling_price }}" data-stock="{{ p.stock_qty }}" data-category="{{ p.category }}" data-unit="{{ p.get_unit_display }}">
+            <div style="font-size:1.3rem; margin-bottom:4px;">
+              {% if 'milk' in p.name.lower or 'dairy' in p.category.lower %}🥛
+              {% elif 'tea' in p.name.lower or 'coffee' in p.name.lower %}☕
+              {% elif 'oil' in p.name.lower or 'ghee' in p.name.lower %}🛢️
+              {% elif 'atta' in p.name.lower or 'rice' in p.name.lower %}🌾
+              {% elif 'soap' in p.name.lower or 'shampoo' in p.name.lower %}🧼
+              {% elif 'tablet' in p.name.lower or 'medicine' in p.category.lower %}💊
+              {% elif 'cream' in p.name.lower or 'makeup' in p.name.lower %}💄
+              {% elif 'biscuit' in p.name.lower or 'snack' in p.category.lower %}🍪
+              {% else %}📦{% endif %}
+            </div>
+            <div class="tile-name" title="{{ p.name }}">{{ p.name }}</div>
+            <div class="tile-price">Rs. {{ p.selling_price|floatformat:2 }}</div>
+            <div class="tile-stock {% if p.stock_qty <= 5 %}danger{% endif %}">{{ p.stock_qty }} {{ p.unit }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Real-Time Cart Items -->
+      <div class="card">
+        <h3 style="margin-top:0; font-size:1.05rem; margin-bottom:12px;">🧾 Current Cart Items</h3>
+        <div id="anomaly-alert-box" style="display:none; padding:12px; background:var(--danger-bg); color:var(--danger); border:1px solid rgba(239,68,68,0.3); border-radius:var(--radius); margin-bottom:16px; font-size:0.86rem;"></div>
+        <div id="cart-list"></div>
+      </div>
+    </div>
+
+    <!-- Right Column: Customer, Discount, Loyalty & Live UPI QR -->
+    <div>
+      <div class="card">
+        <h3 style="margin-top:0; font-size:1.05rem;">Billing Summary</h3>
+
+        <!-- Customer Phone & Live Loyalty Lookup -->
+        <div class="field">
+          <label>Customer Phone (Auto-fetches Rewards & Ledger)</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" name="customer_phone" id="customer-phone-input" placeholder="10-digit mobile number" style="flex:1;">
+            <span id="lookup-spinner" style="display:none; align-self:center; font-size:0.85rem; color:var(--primary);">Checking...</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Customer Name</label>
+          <input type="text" name="customer_name" id="customer-name-input" placeholder="e.g. Ramesh Sharma">
+        </div>
+
+        <!-- Loyalty Points Redemption Banner -->
+        <div id="loyalty-banner" style="display:none; padding:10px 14px; background:var(--primary-light); color:var(--primary); border-radius:var(--radius); margin-bottom:16px; font-size:0.86rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span>🎁 Available Rewards: <strong id="loyalty-points-display">0</strong> pts</span>
+            <button type="button" id="btn-redeem-points" class="btn btn-sm btn-primary" style="padding:4px 10px; font-size:0.78rem;">Redeem (Rs. 0)</button>
+          </div>
+        </div>
+        <input type="hidden" name="redeem_points" id="redeem-points-input" value="0">
+
+        <!-- Discount & GST -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="field">
+            <label>Discount (Rs.)</label>
+            <input type="number" id="discount-input" name="discount" value="0" min="0" step="0.01">
+          </div>
+          <div class="field">
+            <label>GST (%)</label>
+            <input type="number" id="gst-input" name="gst_percent" value="0" min="0" step="0.01">
+          </div>
+        </div>
+
+        <!-- Payment Mode Selection -->
+        <div class="field">
+          <label>Payment Mode</label>
+          <select name="payment_mode" id="payment-mode-select">
+            <option value="cash" selected>💵 Cash (Nagad)</option>
+            <option value="upi">📲 UPI / Online (GPay / PhonePe / Paytm)</option>
+            <option value="card">💳 Debit / Credit Card</option>
+            <option value="udhaar">📒 Udhaar (Credit Ledger)</option>
+          </select>
+        </div>
+
+        <!-- Summary Totals -->
+        <div class="summary-row"><span>Subtotal Items</span><span id="subtotal-value">Rs. 0.00</span></div>
+        <div class="summary-row" id="points-discount-row" style="display:none; color:var(--primary);">
+          <span>Loyalty Points Discount</span><span id="points-discount-val">-Rs. 0.00</span>
+        </div>
+        <div class="summary-row total"><span>Grand Total</span><span id="total-value" style="color:var(--primary); font-size:1.4rem;">Rs. 0.00</span></div>
+
+        <input type="hidden" name="items_json" id="items-json" value="[]">
+        <button type="submit" id="submit-bill-btn" class="btn btn-primary" style="width:100%; padding:14px; font-size:1rem; margin-top:16px;" disabled>
+          Generate & Print Bill →
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/billing.js' %}"></script>
+<script>
+  // Category Pill Filter for POS Touch Grid
+  const catPills = document.querySelectorAll('.pos-cat-pill');
+  const posTiles = document.querySelectorAll('.pos-tile');
+  const searchInput = document.getElementById('pos-search-input');
+
+  catPills.forEach(pill => {
+    pill.addEventListener('click', function() {
+      catPills.forEach(p => p.classList.remove('active'));
+      this.classList.add('active');
+      const cat = this.getAttribute('data-cat');
+      filterTiles(cat, searchInput.value.toLowerCase());
+    });
+  });
+
+  searchInput.addEventListener('input', function() {
+    const activeCat = document.querySelector('.pos-cat-pill.active').getAttribute('data-cat');
+    filterTiles(activeCat, this.value.toLowerCase());
+  });
+
+  function filterTiles(cat, search) {
+    posTiles.forEach(tile => {
+      const tileName = tile.getAttribute('data-name').toLowerCase();
+      const tileCat = tile.getAttribute('data-category');
+      const matchesCat = (cat === 'all' || tileCat === cat);
+      const matchesSearch = (!search || tileName.includes(search));
+      tile.style.display = (matchesCat && matchesSearch) ? 'flex' : 'none';
+    });
+  }
+
+  // Click on tile to add to cart
+  posTiles.forEach(tile => {
+    tile.addEventListener('click', function() {
+      const pId = this.getAttribute('data-id');
+      const pName = this.getAttribute('data-name');
+      const pPrice = parseFloat(this.getAttribute('data-price')) || 0;
+      const pStock = parseInt(this.getAttribute('data-stock')) || 0;
+      if (pStock <= 0) {
+        alert(`${pName} is out of stock!`);
+        return;
+      }
+      window.addToCartDirect(pId, pName, pPrice, pStock, 1);
+    });
+  });
+
+  // Customer Phone Auto-lookup for Loyalty Rewards
+  const phoneInput = document.getElementById('customer-phone-input');
+  const nameInput = document.getElementById('customer-name-input');
+  const loyaltyBanner = document.getElementById('loyalty-banner');
+  const loyaltyPointsDisplay = document.getElementById('loyalty-points-display');
+  const btnRedeemPoints = document.getElementById('btn-redeem-points');
+  const redeemPointsInput = document.getElementById('redeem-points-input');
+  let customerPoints = 0;
+
+  phoneInput.addEventListener('input', function() {
+    const phone = phoneInput.value.trim();
+    if (phone.length === 10) {
+      fetch(`{% url 'billing:customer_lookup_api' %}?phone=${phone}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.found) {
+            if (!nameInput.value) nameInput.value = data.name;
+            customerPoints = data.points;
+            if (customerPoints > 0) {
+              loyaltyPointsDisplay.textContent = customerPoints;
+              btnRedeemPoints.textContent = `Redeem Rs. ${customerPoints}`;
+              loyaltyBanner.style.display = 'block';
+            } else {
+              loyaltyBanner.style.display = 'none';
+            }
+          }
+        });
+    } else {
+      loyaltyBanner.style.display = 'none';
+    }
+  });
+
+  btnRedeemPoints.addEventListener('click', function() {
+    redeemPointsInput.value = customerPoints;
+    btnRedeemPoints.textContent = '✓ Redeemed';
+    btnRedeemPoints.disabled = true;
+    window.triggerCartRecalc(customerPoints);
+  });
+
+  // Voice Search (Speech to text)
+  const btnVoice = document.getElementById('btn-voice-search');
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'hi-IN'; // Supports Hindi & Hinglish product names
+    recognition.onresult = function(event) {
+      const transcript = event.results[0][0].transcript;
+      searchInput.value = transcript;
+      searchInput.dispatchEvent(new Event('input'));
+    };
+    btnVoice.addEventListener('click', function() {
+      btnVoice.textContent = '🎙️ Listening...';
+      recognition.start();
+    });
+    recognition.onend = function() {
+      btnVoice.innerHTML = '<span style="font-size:1.1rem;">🎙️</span> Voice Search';
+    };
+  } else {
+    btnVoice.style.display = 'none';
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Suppliers · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+  <div>
+    <h2>🏢 Suppliers & Vendors</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem; margin-top:2px;">Track distributors and stock purchasing</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'purchases:purchase_create' %}" class="btn"><span style="font-size:1.1rem;">📦</span> New Purchase Order</a>
+    <a href="{% url 'purchases:supplier_add' %}" class="btn btn-primary"><span style="font-size:1.1rem;">+</span> Add Supplier</a>
+  </div>
+</div>
+
+<div class="stat-grid" style="margin-bottom:24px;">
+  <div class="card stat-card">
+    <div class="stat-label">Total Suppliers</div>
+    <div class="stat-value">{{ suppliers.paginator.count|default:suppliers|length }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Total Amount Owed to Suppliers</div>
+    <div class="stat-value {% if total_owed > 0 %}danger{% else %}primary{% endif %}">Rs. {{ total_owed|floatformat:2 }}</div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:20px;">
+  <form method="get" style="display:flex; gap:10px;">
+    <input type="text" name="q" value="{{ query }}" placeholder="Search supplier name, company or phone..." style="flex:1;">
+    <button type="submit" class="btn btn-primary">Search</button>
+    {% if query %}
+    <a href="{% url 'purchases:supplier_list' %}" class="btn">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+  {% if suppliers %}
+  <table>
+    <thead>
+      <tr>
+        <th>Supplier Name</th>
+        <th>Company</th>
+        <th>Phone</th>
+        <th>Balance Owed</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in suppliers %}
+      <tr>
+        <td><strong>{{ s.name }}</strong></td>
+        <td>{{ s.company_name|default:"—" }}</td>
+        <td>{{ s.phone }}</td>
+        <td>
+          {% if s.balance_owed > 0 %}
+          <span class="badge badge-danger">Rs. {{ s.balance_owed|floatformat:2 }} Due</span>
+          {% else %}
+          <span class="badge badge-success">Rs. 0 (All Clear)</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{% url 'purchases:supplier_detail' s.id %}" class="btn btn-sm">View Ledger</a>
+          <a href="{% url 'purchases:supplier_edit' s.id %}" class="btn btn-sm" style="color:var(--text-muted);">Edit</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.has_other_pages %}
+  <div style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm">← Previous</a>
+    {% endif %}
+    <span style="padding:6px 12px; font-size:0.88rem; color:var(--text-muted);">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <div style="font-size:2.5rem; margin-bottom:8px;">🏢</div>
+    <p>No suppliers found. Add your first distributor or vendor to start recording purchases!</p>
+    <a href="{% url 'purchases:supplier_add' %}" class="btn btn-primary" style="margin-top:12px;">+ Add Supplier</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

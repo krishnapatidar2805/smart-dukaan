@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Process Return for Bill #{{ bill.id }} · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="max-width:760px; margin:0 auto;">
+  <div style="margin-bottom:20px;">
+    <a href="{% url 'billing:bill_detail' bill.id %}" style="color:var(--text-muted); font-size:0.88rem;">← Back to Bill #{{ bill.id }}</a>
+    <h2 style="margin-top:8px;">🔄 Process Product Return & Refund</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem;">
+      Bill #{{ bill.id }} · Customer: {{ bill.customer_name_snapshot|default:"Walk-in" }} ({{ bill.customer_phone_snapshot|default:"No phone" }})
+    </div>
+  </div>
+
+  <form method="post" id="return-form">
+    {% csrf_token %}
+    <div class="card" style="margin-bottom:20px;">
+      <h3 style="margin-bottom:16px;">1. Select Items to Return</h3>
+      <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">
+        Specify how many units the customer is returning. Inventory stock will be automatically restored.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Billed Qty</th>
+            <th>Billed Rate</th>
+            <th>Return Qty</th>
+            <th>Refund Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in bill.items.all %}
+          <tr>
+            <td><strong>{{ item.product_name_snapshot }}</strong></td>
+            <td>{{ item.quantity }}</td>
+            <td>Rs. {{ item.price_at_sale|floatformat:2 }}</td>
+            <td style="width:140px;">
+              <input type="number" name="return_qty_{{ item.id }}" class="return-qty-input"
+                     data-rate="{{ item.price_at_sale }}" data-max="{{ item.quantity }}"
+                     min="0" max="{{ item.quantity }}" value="0" style="padding:8px 12px;">
+            </td>
+            <td><strong class="item-refund-display">Rs. 0.00</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:16px;">2. Refund Summary & Reason</h3>
+      <div class="summary-row total">
+        <span>Total Refund Amount</span>
+        <span id="total-refund-display" style="color:var(--danger); font-size:1.4rem;">Rs. 0.00</span>
+      </div>
+
+      <div class="field" style="margin-top:20px;">
+        <label>Reason for Return</label>
+        <select name="reason" style="margin-bottom:10px;">
+          <option value="Customer changed mind">Customer changed mind</option>
+          <option value="Defective / Damaged product">Defective / Damaged product</option>
+          <option value="Expired item">Expired item</option>
+          <option value="Wrong item purchased">Wrong item purchased</option>
+          <option value="Billing mistake">Billing mistake</option>
+        </select>
+      </div>
+
+      {% if bill.payment_mode == 'udhaar' and bill.customer %}
+      <div style="padding:12px; background:var(--primary-light); color:var(--primary); border-radius:var(--radius); margin-bottom:20px; font-size:0.88rem;">
+        ℹ️ This was an <strong>Udhaar (Credit)</strong> bill. The refund amount will automatically reduce the customer's pending due ledger balance.
+      </div>
+      {% endif %}
+
+      <div style="display:flex; gap:10px;">
+        <button type="submit" class="btn btn-danger" style="flex:1; padding:12px; font-size:0.95rem;">
+          Confirm Return & Restore Stock →
+        </button>
+        <a href="{% url 'billing:bill_detail' bill.id %}" class="btn">Cancel</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const qtyInputs = document.querySelectorAll('.return-qty-input');
+  const totalRefundDisplay = document.getElementById('total-refund-display');
+
+  function calculateRefunds() {
+    let grandTotal = 0;
+    qtyInputs.forEach(input => {
+      const qty = parseInt(input.value) || 0;
+      const rate = parseFloat(input.getAttribute('data-rate')) || 0;
+      const max = parseInt(input.getAttribute('data-max')) || 0;
+      const validQty = Math.min(Math.max(0, qty), max);
+      const subtotal = validQty * rate;
+      grandTotal += subtotal;
+
+      const display = input.closest('tr').querySelector('.item-refund-display');
+      if (display) {
+        display.textContent = `Rs. ${subtotal.toFixed(2)}`;
+      }
+    });
+
+    totalRefundDisplay.textContent = `Rs. ${grandTotal.toFixed(2)}`;
+  }
+
+  qtyInputs.forEach(input => {
+    input.addEventListener('input', calculateRefunds);
+  });
+</script>
+{% endblock %}

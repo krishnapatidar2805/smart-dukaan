@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}AI Assistant · Smart Dukaan{% endblock %}
+{% block content %}
+<div class="ai-container">
+  <!-- AI Header Card with Status -->
+  <div class="ai-header-card">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div style="width:40px; height:40px; border-radius:12px; background:var(--primary-gradient); display:flex; align-items:center; justify-content:center; font-size:1.4rem; box-shadow:var(--shadow-glow);">
+        🤖
+      </div>
+      <div>
+        <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
+          Smart Dukaan AI Copilot
+        </h3>
+        <div style="font-size:0.8rem; color:var(--text-muted);">Real-time Store Intelligence & Decision Engine</div>
+      </div>
+    </div>
+    <div class="ai-status-pill">
+      <span style="width:7px; height:7px; border-radius:50%; background:var(--primary); box-shadow:0 0 8px var(--primary);"></span>
+      Connected to Live Dukaan Data
+    </div>
+  </div>
+
+  <!-- Main Chat Window Card -->
+  <div class="card" style="padding:0; border-radius:0 0 var(--radius) var(--radius); border-top:none; box-shadow:var(--shadow-lg);">
+    <div class="chat-window" id="chat-window">
+      <!-- Initial AI Welcome Row -->
+      <div class="chat-row">
+        <div class="chat-avatar ai-avatar">🤖</div>
+        <div class="chat-bubble ai">
+          <strong>Namaste Krishna! 🙏</strong><br>
+          Main aapka <strong>AI Business Assistant</strong> hoon. Main aapki dukaan ki live sales, stock levels, udhaar khata, aur shuddh munafa (net profit) sab jaanta hoon.<br><br>
+          Neeche diye gaye kisi bhi sawal par click karein ya apna sawal Hindi/English me type karein!
+        </div>
+      </div>
+    </div>
+
+    <!-- Suggested Question Chips Bar -->
+    <div class="suggested-chips-bar">
+      <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); width:100%; margin-bottom:2px; text-transform:uppercase; letter-spacing:0.04em;">
+        ⚡ Instant Quick Prompts:
+      </div>
+      <button type="button" class="suggested-chip">📊 Aaj ki Total Sale kitni hui?</button>
+      <button type="button" class="suggested-chip">🚨 Kaunsa samaan khatam hone wala hai?</button>
+      <button type="button" class="suggested-chip">🏆 Best-Selling product kaunsa hai?</button>
+      <button type="button" class="suggested-chip">💳 Market me kitna udhaar baaki hai?</button>
+      <button type="button" class="suggested-chip">📈 30-din ka Net Profit kitna hua?</button>
+    </div>
+
+    <!-- Chat Input Row -->
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" placeholder="💬 Ask anything (e.g. 'Aaj kitne bill bane?', 'Amul Butter ka kitna stock bacha hai?')..." autofocus>
+      <button id="chat-send-btn" class="btn btn-primary" style="padding:12px 24px; font-size:0.95rem; white-space:nowrap;">
+        🚀 Ask AI
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>window.AI_ASK_URL = "{% url 'dashboard:ai_ask_api' %}";</script>
+<script src="{% static 'js/ai_chat.js' %}"></script>
+{% endblock %}

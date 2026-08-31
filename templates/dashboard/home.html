@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Dashboard & Analytics · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <div>
+    <h2>📊 Store Intelligence & Analytics</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem; margin-top:2px;">Live sales performance, customer loyalty, rush hour analytics and restock alerts</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'billing:cash_register' %}" class="btn">💰 Cash Register</a>
+    <a href="{% url 'billing:bill_create' %}" class="btn btn-primary">+ New POS Bill</a>
+  </div>
+</div>
+
+<!-- 🌐 Online Store & WhatsApp Self-Order Showcase Banner -->
+{% if shop %}
+<div class="card" style="margin-bottom:20px; background:linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(99,102,241,0.08) 100%); border:1px solid rgba(16,185,129,0.3); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; padding:18px 22px;">
+  <div style="display:flex; align-items:center; gap:14px;">
+    <div style="width:44px; height:44px; border-radius:12px; background:#25D366; color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.5rem; box-shadow:0 4px 15px rgba(37,211,102,0.4);">
+      📲
+    </div>
+    <div>
+      <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+        Zero-Commission WhatsApp Online Store
+        <span class="badge badge-success" style="font-size:0.72rem;">0% Commission · Free</span>
+      </h3>
+      <div style="font-size:0.84rem; color:var(--text-muted); margin-top:2px;">
+        Customers can scan your counter QR or visit your mobile store to place direct orders on WhatsApp.
+      </div>
+    </div>
+  </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <a href="{% url 'dashboard:public_storefront' shop.id %}" target="_blank" class="btn btn-sm" style="border:1px solid rgba(16,185,129,0.4); color:var(--primary); font-weight:700;">
+      🌐 Visit My Online Store &rarr;
+    </a>
+    <a href="{% url 'dashboard:store_qr_standee' shop.id %}" class="btn btn-sm btn-primary" style="background:#25D366 !important; box-shadow:0 4px 12px rgba(37,211,102,0.35) !important;">
+      📲 Print Counter QR Standee
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<!-- Weekly AI Executive Summary -->
+<div class="card" style="margin-bottom:24px; border-left:4px solid var(--primary); background:linear-gradient(to right, var(--surface), var(--surface-hover));">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:1.2rem;">🤖</span>
+      <h3 style="margin:0; font-size:1.05rem;">Weekly Business Briefing</h3>
+      <span class="badge" style="background:var(--primary-light); color:var(--primary); font-size:0.75rem;">AI Digest</span>
+    </div>
+    <button type="button" onclick="navigator.clipboard.writeText('{{ weekly_summary|escapejs }}'); alert('Weekly summary copied!');" class="btn btn-sm" style="font-size:0.78rem;">
+      📋 Copy Summary
+    </button>
+  </div>
+  <p style="color:var(--text); font-size:0.92rem; line-height:1.6; margin:0;">
+    {{ weekly_summary }}
+  </p>
+</div>
+
+<!-- Stat Cards (5-Grid) -->
+<div class="stat-grid" style="grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));">
+  <div class="card stat-card">
+    <div class="stat-label">Today's Total Sales</div>
+    <div class="stat-value primary">Rs. {{ today_total|floatformat:2 }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">7-Day Gross Sales</div>
+    <div class="stat-value">Rs. {{ week_total|floatformat:2 }}</div>
+  </div>
+  <div class="card stat-card" style="border:1px solid rgba(16, 185, 129, 0.4); background:rgba(16, 185, 129, 0.05);">
+    <div class="stat-label" style="color:var(--primary); font-weight:700;">📈 30D Net Profit (Shuddh Munafa)</div>
+    <div class="stat-value primary" style="font-size:1.45rem;">Rs. {{ net_profit_30d|floatformat:2 }}</div>
+    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+      <span class="badge" style="background:var(--primary-light); color:var(--primary); font-weight:700; padding:2px 6px;">{{ profit_margin_30d }}% Margin</span>
+    </div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">🔮 Reorder Alerts (&le; 5 Days)</div>
+    <div class="stat-value {% if critical_restock_list %}danger{% else %}primary{% endif %}">
+      {{ critical_restock_list|length }}
+    </div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Pending Customer Udhaar</div>
+    <div class="stat-value accent">Rs. {{ total_udhaar|floatformat:2 }}</div>
+  </div>
+</div>
+
+<!-- Row 1: Sales Trend + Payment Mode Split Doughnut -->
+<div style="display:grid; grid-template-columns:1.6fr 1fr; gap:20px; align-items:start; margin-bottom:24px;">
+  <div class="card">
+    <h3 style="margin-top:0; font-size:1.05rem; margin-bottom:16px;">📈 Sales Trend — Last 7 Days</h3>
+    <canvas id="salesChart" height="110"></canvas>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0; font-size:1.05rem; margin-bottom:16px;">💳 Payment Mode Split</h3>
+    <div style="max-width:210px; margin:0 auto;">
+      <canvas id="paymentChart" height="160"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Row 2: Hourly Rush Hour Heatmap + Reorder Predictions -->
+<div style="display:grid; grid-template-columns:1.5fr 1fr; gap:20px; align-items:start; margin-bottom:24px;">
+  <div class="card">
+    <h3 style="margin-top:0; font-size:1.05rem; margin-bottom:12px;">⏰ Peak Rush Hours Heatmap (Store Traffic)</h3>
+    <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:14px;">Identifies customer footfall hours to optimize cashier staffing.</div>
+    <canvas id="hourlyChart" height="100"></canvas>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h3 style="margin:0; font-size:1.05rem;">🔮 Reorder Predictions</h3>
+      <a href="{% url 'inventory:product_list' %}?stock_filter=reorder" style="font-size:0.8rem; color:var(--primary); font-weight:600;">View All</a>
+    </div>
+
+    {% if critical_restock_list %}
+      {% for p in critical_restock_list %}
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); font-size:0.88rem;">
+        <div>
+          <strong>{{ p.name }}</strong>
+          <div style="font-size:0.75rem; color:var(--text-muted);">Stock: {{ p.stock_qty }} {{ p.unit }}</div>
+        </div>
+        <div style="text-align:right;">
+          {% if p.days_left == 0 %}
+          <span class="badge badge-danger">Out of Stock</span>
+          {% else %}
+          <span class="badge badge-danger">Runs out in ~{{ p.days_left }}d</span>
+          {% endif %}
+          <div>
+            <a href="{% url 'purchases:purchase_create' %}" style="font-size:0.75rem; color:var(--primary); font-weight:700;">Reorder →</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state" style="padding:24px;">
+        <div style="font-size:1.8rem; margin-bottom:6px;">✅</div>
+        All products have sufficient stock!
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Row 3: Top Selling Items + Loyalty Leaderboard -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+  <div class="card">
+    <h3 style="margin-top:0; font-size:1.05rem; margin-bottom:14px;">🏆 Top Selling Items (30 days)</h3>
+    {% if top_items %}
+    <table>
+      <thead><tr><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
+      <tbody>
+        {% for item in top_items %}
+        <tr>
+          <td><strong>{{ item.product_name_snapshot }}</strong></td>
+          <td>{{ item.total_qty }} units</td>
+          <td><strong style="color:var(--primary);">Rs. {{ item.total_revenue|floatformat:2 }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state" style="padding:20px;">No sales recorded yet.</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h3 style="margin:0; font-size:1.05rem;">🎁 Customer Loyalty Leaderboard</h3>
+      <a href="{% url 'udhaar:customer_list' %}" style="font-size:0.8rem; color:var(--primary); font-weight:600;">View Customers</a>
+    </div>
+    {% if top_loyal_customers %}
+    <table>
+      <thead><tr><th>Customer</th><th>Phone</th><th>Reward Points</th></tr></thead>
+      <tbody>
+        {% for c in top_loyal_customers %}
+        <tr>
+          <td><strong>{{ c.name }}</strong></td>
+          <td style="font-size:0.84rem; color:var(--text-muted);">{{ c.phone }}</td>
+          <td><span class="badge" style="background:var(--primary-light); color:var(--primary); font-weight:700;">🎁 {{ c.loyalty_points }} pts</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state" style="padding:20px;">Points will accumulate as customers purchase.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Row 3: Most Profitable Items & Near-Expiry Stock Radar -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; margin-bottom:24px;">
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h3 style="margin:0; font-size:1.05rem;">💰 Top Profitable Items (Highest Margin)</h3>
+      <span class="badge" style="background:var(--primary-light); color:var(--primary); font-size:0.75rem;">30D Profit</span>
+    </div>
+    {% if top_profitable_items %}
+    <table>
+      <thead><tr><th>Product</th><th>Qty Sold</th><th>Net Profit Earned</th></tr></thead>
+      <tbody>
+        {% for item in top_profitable_items %}
+        <tr>
+          <td><strong>{{ item.name }}</strong></td>
+          <td style="color:var(--text-muted); font-size:0.86rem;">{{ item.qty }} units</td>
+          <td><strong style="color:var(--primary);">+ Rs. {{ item.profit|floatformat:2 }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state" style="padding:20px;">Profit will calculate as sales are recorded.</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h3 style="margin:0; font-size:1.05rem;">⏰ Near-Expiry Radar (&le; 30 Days)</h3>
+      <a href="{% url 'inventory:product_list' %}" style="font-size:0.8rem; color:var(--primary); font-weight:600;">View Stock</a>
+    </div>
+    {% if near_expiry_products %}
+    <table>
+      <thead><tr><th>Product</th><th>Expiry Date</th><th>Stock Left</th></tr></thead>
+      <tbody>
+        {% for p in near_expiry_products %}
+        <tr>
+          <td><strong>{{ p.name }}</strong></td>
+          <td><span class="badge badge-danger">Exp: {{ p.expiry_date|date:"d M Y" }}</span></td>
+          <td>{{ p.stock_qty }} {{ p.unit }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state" style="padding:20px; color:var(--primary);">
+      ✅ No products expiring in the next 30 days!
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Row 4: 📦 Dead Stock & Fasa Hua Paisa Locker Radar -->
+<div class="card" style="margin-bottom:24px; border:1px solid rgba(239,68,68,0.3); background:rgba(239,68,68,0.03);">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+    <div>
+      <h3 style="margin:0; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+        📦 Dead Stock & Fasa Hua Paisa Detector
+        <span class="badge" style="background:rgba(239,68,68,0.15); color:var(--danger); font-weight:700;">Unsold for 30+ Days</span>
+      </h3>
+      <div style="font-size:0.84rem; color:var(--text-muted); margin-top:2px;">
+        Products with zero sales locking your working capital on the shelf
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Trapped Capital</div>
+      <div style="font-family:var(--font-display); font-size:1.35rem; font-weight:800; color:var(--danger);">
+        Rs. {{ dead_stock_capital|floatformat:2 }}
+      </div>
+    </div>
+  </div>
+
+  {% if dead_stock_items %}
+  <table>
+    <thead>
+      <tr>
+        <th>Product Name</th>
+        <th>Category</th>
+        <th>Stock Left</th>
+        <th>Cost Price</th>
+        <th>Locked Capital</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in dead_stock_items %}
+      <tr>
+        <td><strong>{{ item.name }}</strong></td>
+        <td><span class="badge" style="background:var(--surface-hover);">{{ item.category|default:"General" }}</span></td>
+        <td>{{ item.stock_qty }} {{ item.get_unit_display }}</td>
+        <td>Rs. {{ item.cost_price|floatformat:2 }}</td>
+        <td><strong style="color:var(--danger);">Rs. {{ item.stock_qty|floatformat:0 }} &times; {{ item.cost_price|floatformat:0 }}</strong></td>
+        <td>
+          <a href="{% url 'inventory:product_list' %}?q={{ item.name }}" class="btn btn-sm" style="border:1px solid rgba(239,68,68,0.3); color:var(--danger);">
+            ⚡ Clear Stock
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state" style="padding:20px; color:var(--primary);">
+    ✨ Fantastic! All your inventory is actively selling with zero dead stock!
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? '#1f2937' : '#e2e8f0';
+
+  // 1. Sales Trend Line Chart
+  new Chart(document.getElementById('salesChart'), {
+    type: 'line',
+    data: {
+      labels: {{ chart_labels|safe }},
+      datasets: [{
+        label: 'Sales (Rs.)',
+        data: {{ chart_data|safe }},
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+        tension: 0.35,
+        fill: true,
+        pointRadius: 4,
+        pointBackgroundColor: '#10b981',
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: gridColor } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // 2. Payment Method Split Doughnut Chart
+  new Chart(document.getElementById('paymentChart'), {
+    type: 'doughnut',
+    data: {
+      labels: {{ payment_labels|safe }},
+      datasets: [{
+        data: {{ payment_data|safe }},
+        backgroundColor: ['#10b981', '#6366f1', '#f59e0b', '#ef4444'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+      },
+      cutout: '68%'
+    }
+  });
+
+  // 3. Hourly Rush Heatmap Bar Chart
+  new Chart(document.getElementById('hourlyChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ hourly_labels|safe }},
+      datasets: [{
+        label: 'Bills Processed',
+        data: {{ hourly_data|safe }},
+        backgroundColor: '#6366f1',
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { stepSize: 1 } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Animated Count-up for Numbers
+  document.querySelectorAll('.stat-value').forEach(el => {
+    const text = el.innerText.trim();
+    const match = text.match(/([\d,\.]+)/);
+    if (!match) return;
+    const target = parseFloat(match[0].replace(/,/g, ''));
+    if (isNaN(target) || target <= 0) return;
+
+    const prefix = text.startsWith('Rs.') ? 'Rs. ' : '';
+    const suffix = text.includes('items') ? ' items' : '';
+    let current = 0;
+    const step = target / 35;
+    const timer = setInterval(() => {
+      current += step;
+      if (current >= target) {
+        current = target;
+        clearInterval(timer);
+      }
+      el.innerText = `${prefix}${current.toLocaleString('en-IN', { maximumFractionDigits: 2 })}${suffix}`;
+    }, 20);
+  });
+</script>
+{% endblock %}

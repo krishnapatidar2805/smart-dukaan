@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="max-width:560px; margin:0 auto;">
+  <div style="margin-bottom:20px;">
+    <a href="{% url 'inventory:product_list' %}" style="color:var(--text-muted); font-size:0.88rem;">← Back to Inventory</a>
+    <h2 style="margin-top:8px;">{{ title }}</h2>
+  </div>
+
+  <div class="card">
+    <form method="post" id="product-form">
+      {% csrf_token %}
+      <div class="field">
+        <label>Product Name *</label>
+        {{ form.name }}
+      </div>
+
+      <div class="field">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label style="margin:0;">Category</label>
+          <span id="suggest-indicator" style="display:none; font-size:0.8rem; color:var(--primary);">
+            ✨ Suggested: <button type="button" id="btn-apply-category" style="background:var(--primary-light); color:var(--primary); border:1px solid var(--primary); border-radius:999px; padding:2px 8px; font-weight:600; cursor:pointer;"></button>
+          </span>
+        </div>
+        <div style="margin-top:6px;">
+          {{ form.category }}
+        </div>
+        <span style="font-size:0.78rem; color:var(--text-muted);">
+          Start typing product name above to see smart AI category suggestions.
+        </span>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <div class="field"><label>Cost Price / Purchase (Rs.)</label>{{ form.cost_price }}</div>
+        <div class="field"><label>Selling Price / MRP (Rs.) *</label>{{ form.selling_price }}</div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <div class="field"><label>Stock Quantity *</label>{{ form.stock_qty }}</div>
+        <div class="field"><label>Unit of Measurement</label>{{ form.unit }}</div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <div class="field"><label>Low Stock Alert Threshold</label>{{ form.low_stock_threshold }}</div>
+        <div class="field"><label>Expiry Date (Optional)</label>{{ form.expiry_date }}</div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:12px;">
+        <button type="submit" class="btn btn-primary" style="flex:1; padding:12px;">Save Product</button>
+        <a href="{% url 'inventory:product_list' %}" class="btn">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const nameInput = document.querySelector('input[name="name"]');
+  const categoryInput = document.querySelector('input[name="category"]');
+  const suggestIndicator = document.getElementById('suggest-indicator');
+  const btnApplyCategory = document.getElementById('btn-apply-category');
+  let debounceTimeout = null;
+
+  if (nameInput && categoryInput) {
+    nameInput.addEventListener('input', function() {
+      const val = nameInput.value.trim();
+      clearTimeout(debounceTimeout);
+
+      if (val.length < 3) {
+        suggestIndicator.style.display = 'none';
+        return;
+      }
+
+      debounceTimeout = setTimeout(() => {
+        fetch(`{% url 'inventory:suggest_category_api' %}?name=${encodeURIComponent(val)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.category && (!categoryInput.value || categoryInput.value.trim() === '')) {
+              btnApplyCategory.textContent = data.category;
+              suggestIndicator.style.display = 'inline-flex';
+              suggestIndicator.style.alignItems = 'center';
+              suggestIndicator.style.gap = '6px';
+            } else {
+              suggestIndicator.style.display = 'none';
+            }
+          })
+          .catch(() => {
+            suggestIndicator.style.display = 'none';
+          });
+      }, 300);
+    });
+
+    btnApplyCategory.addEventListener('click', function() {
+      categoryInput.value = btnApplyCategory.textContent;
+      suggestIndicator.style.display = 'none';
+      categoryInput.focus();
+    });
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receipt #{{ bill.id }} - {{ shop.name }}</title>
+  <style>
+    @media print {
+      body { margin: 0; padding: 0; background: #fff; }
+      .no-print { display: none !important; }
+      @page { margin: 0; size: 80mm auto; }
+    }
+    body {
+      font-family: 'Courier New', Courier, monospace, monospace;
+      font-size: 13px;
+      line-height: 1.35;
+      color: #000;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .ticket {
+      width: 78mm;
+      max-width: 100%;
+      background: #fff;
+      padding: 16px 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      border-radius: 4px;
+    }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .header { text-align: center; margin-bottom: 12px; }
+    .header h2 { margin: 0 0 4px; font-size: 18px; text-transform: uppercase; }
+    .header p { margin: 2px 0; font-size: 11px; }
+    .divider { border-top: 1px dashed #000; margin: 8px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 12px; }
+    th { text-align: left; border-bottom: 1px dashed #000; padding: 4px 0; font-size: 11px; }
+    td { padding: 4px 0; vertical-align: top; }
+    .right { text-align: right; }
+    .totals { margin-top: 6px; }
+    .row { display: flex; justify-content: space-between; margin: 3px 0; }
+    .grand-total { font-size: 16px; font-weight: bold; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 6px 0; margin-top: 6px; }
+    .footer { text-align: center; font-size: 11px; margin-top: 14px; }
+    .btn-print {
+      margin-bottom: 16px;
+      padding: 10px 20px;
+      background: #059669;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <button class="btn-print" onclick="window.print()">🖨️ Print Thermal Slip</button>
+    <button class="btn-print" style="background:#4b5563;" onclick="window.close()">✕ Close</button>
+  </div>
+
+  <div class="ticket">
+    <div class="header">
+      <h2>🏪 {{ shop.name }}</h2>
+      {% if shop.address %}<p>{{ shop.address }}</p>{% endif %}
+      <p>Tel: {{ bill.customer_phone_snapshot|default:shop.owner.profile.phone|default:"Counter POS" }}</p>
+      <div class="divider"></div>
+      <p class="bold">TAX INVOICE / RETAIL RECEIPT</p>
+      <div class="row" style="font-size:11px;">
+        <span>Bill #: <strong>#{{ bill.id }}</strong></span>
+        <span>{{ bill.date|date:"d-m-Y h:i A" }}</span>
+      </div>
+      {% if bill.customer_name_snapshot %}
+      <div class="row" style="font-size:11px; margin-top:2px;">
+        <span>Customer: {{ bill.customer_name_snapshot }}</span>
+        <span>{{ bill.customer_phone_snapshot }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="divider"></div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ITEM</th>
+          <th class="right">QTY</th>
+          <th class="right">PRICE</th>
+          <th class="right">TOTAL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in bill.items.all %}
+        <tr>
+          <td>{{ item.product_name_snapshot }}</td>
+          <td class="right">{{ item.quantity }}</td>
+          <td class="right">{{ item.price_at_sale|floatformat:2 }}</td>
+          <td class="right">{{ item.line_total|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="divider"></div>
+
+    <div class="totals">
+      <div class="row">
+        <span>Subtotal:</span>
+        <span>Rs. {{ bill.subtotal|floatformat:2 }}</span>
+      </div>
+      {% if bill.discount > 0 %}
+      <div class="row">
+        <span>Discount / Loyalty:</span>
+        <span>-Rs. {{ bill.discount|floatformat:2 }}</span>
+      </div>
+      {% endif %}
+      {% if bill.gst_percent > 0 %}
+      <div class="row">
+        <span>GST ({{ bill.gst_percent }}%):</span>
+        <span>+Rs. {{ bill.gst_amount|floatformat:2 }}</span>
+      </div>
+      {% endif %}
+      <div class="row grand-total">
+        <span>TOTAL DUE:</span>
+        <span>Rs. {{ bill.total_amount|floatformat:2 }}</span>
+      </div>
+      <div class="row" style="font-size:11px; margin-top:4px;">
+        <span>Payment Mode:</span>
+        <span class="bold">{{ bill.get_payment_mode_display|upper }}</span>
+      </div>
+      {% if bill.points_earned > 0 %}
+      <div class="row" style="font-size:11px;">
+        <span>Reward Points Earned:</span>
+        <span class="bold">+{{ bill.points_earned }} pts</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="footer">
+      <p class="bold">*** THANK YOU! VISIT AGAIN ***</p>
+      <p>Powered by Smart Dukaan POS</p>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      // Auto-trigger print on opening
+      setTimeout(function() {
+        // window.print();
+      }, 500);
+    }
+  </script>
+</body>
+</html>

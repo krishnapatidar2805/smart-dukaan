@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="max-width:600px; margin: 0 auto;">
+  <div style="margin-bottom:20px;">
+    <a href="{% url 'purchases:supplier_list' %}" style="color:var(--text-muted); font-size:0.88rem;">← Back to Suppliers</a>
+    <h2 style="margin-top:8px;">{{ title }}</h2>
+  </div>
+
+  <div class="card">
+    <form method="post">
+      {% csrf_token %}
+      <div class="field">
+        <label>Supplier / Contact Name *</label>
+        {{ form.name }}
+      </div>
+      <div class="field">
+        <label>Agency / Company Name</label>
+        {{ form.company_name }}
+      </div>
+      <div class="field">
+        <label>Phone Number *</label>
+        {{ form.phone }}
+      </div>
+      <div class="field">
+        <label>Email Address</label>
+        {{ form.email }}
+      </div>
+      <div class="field">
+        <label>Address / Market Location</label>
+        {{ form.address }}
+      </div>
+      <div class="field">
+        <label>Current Outstanding Balance (Rs.)</label>
+        {{ form.balance_owed }}
+        <span style="font-size:0.78rem; color:var(--text-muted);">Amount you currently owe to this supplier (if any).</span>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:24px;">
+        <button type="submit" class="btn btn-primary" style="flex:1;">Save Supplier</button>
+        <a href="{% url 'purchases:supplier_list' %}" class="btn">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

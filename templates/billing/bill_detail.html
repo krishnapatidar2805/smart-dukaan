@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Bill #{{ bill.id }} · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <div>
+    <a href="{% url 'billing:bill_list' %}" style="color:var(--text-muted); font-size:0.88rem;">← Back to Bill History</a>
+    <h2 style="margin-top:4px;">Bill #{{ bill.id }}</h2>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'billing:bill_thermal' bill.id %}" target="_blank" class="btn" style="border-color:var(--primary);"><span style="font-size:1.1rem;">🖨️</span> Thermal Print</a>
+    <a href="{{ whatsapp_url }}" target="_blank" class="btn" style="background:#25D366; color:#fff; border-color:#25D366;"><span style="font-size:1.1rem;">📲</span> WhatsApp Share</a>
+    <a href="{% url 'billing:bill_return_create' bill.id %}" class="btn"><span style="font-size:1.1rem;">🔄</span> Return</a>
+    <a href="{% url 'billing:bill_pdf' bill.id %}" class="btn btn-primary">⬇ PDF</a>
+  </div>
+</div>
+
+<div class="card" style="max-width:580px; margin-bottom:24px;">
+  <div style="margin-bottom:16px; color:var(--text-muted); font-size:0.9rem;">
+    {{ bill.date|date:"d M Y, h:i A" }} · <span class="badge badge-success">{{ bill.get_payment_mode_display }}</span>
+    {% if bill.customer_name_snapshot %}<br><strong>Customer:</strong> {{ bill.customer_name_snapshot }} ({{ bill.customer_phone_snapshot|default:"No phone" }}){% endif %}
+  </div>
+
+  <table>
+    <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+    <tbody>
+      {% for item in bill.items.all %}
+      <tr>
+        <td><strong>{{ item.product_name_snapshot }}</strong></td>
+        <td>{{ item.quantity }}</td>
+        <td>Rs. {{ item.price_at_sale|floatformat:2 }}</td>
+        <td><strong>Rs. {{ item.line_total|floatformat:2 }}</strong></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="summary-row"><span>Subtotal</span><span>Rs. {{ bill.subtotal|floatformat:2 }}</span></div>
+  <div class="summary-row"><span>Discount</span><span>- Rs. {{ bill.discount|floatformat:2 }}</span></div>
+  {% if bill.points_redeemed > 0 %}
+  <div class="summary-row" style="color:var(--primary);">
+    <span>Loyalty Points Redeemed</span>
+    <span>-{{ bill.points_redeemed }} pts (Rs. {{ bill.points_redeemed }})</span>
+  </div>
+  {% endif %}
+  <div class="summary-row"><span>GST ({{ bill.gst_percent }}%)</span><span>+ Rs. {{ bill.gst_amount|floatformat:2 }}</span></div>
+  <div class="summary-row total"><span>Total Billed</span><span>Rs. {{ bill.total_amount|floatformat:2 }}</span></div>
+
+  {% if bill.points_earned > 0 %}
+  <div style="margin-top:14px; padding:8px 12px; background:var(--primary-light); color:var(--primary); border-radius:var(--radius); font-size:0.86rem; font-weight:600;">
+    🎁 Loyalty Reward: Customer earned <strong>+{{ bill.points_earned }} points</strong> on this bill!
+  </div>
+  {% endif %}
+
+{% if bill.returns.all %}
+<div class="card" style="max-width:580px; border:1px solid rgba(239,68,68,0.3);">
+  <h3 style="color:var(--danger); margin-bottom:12px;">🔄 Processed Returns on this Bill</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Return Date</th>
+        <th>Items Returned</th>
+        <th>Refund Amount</th>
+        <th>Reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in bill.returns.all %}
+      <tr>
+        <td>{{ r.return_date|date:"d M Y, H:i" }}</td>
+        <td>
+          {% for ri in r.items.all %}
+          <div>{{ ri.quantity }}x {{ ri.product.name }}</div>
+          {% endfor %}
+        </td>
+        <td><strong style="color:var(--danger);">Rs. {{ r.refund_amount|floatformat:2 }}</strong></td>
+        <td style="font-size:0.84rem; color:var(--text-muted);">{{ r.reason }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

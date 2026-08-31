@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Returns & Refunds · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+  <div>
+    <h2>🔄 Product Returns & Refunds History</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem; margin-top:2px;">
+      Log of customer returns, stock restorations and refund disbursements
+    </div>
+  </div>
+  <a href="{% url 'billing:bill_list' %}" class="btn btn-primary">🧾 View Bills to Process Return</a>
+</div>
+
+<div class="card">
+  {% if returns %}
+  <table>
+    <thead>
+      <tr>
+        <th>Return #</th>
+        <th>Date</th>
+        <th>Original Bill #</th>
+        <th>Customer</th>
+        <th>Refund Amount</th>
+        <th>Reason</th>
+        <th>Processed By</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in returns %}
+      <tr>
+        <td><strong>#RET-{{ r.id }}</strong></td>
+        <td>{{ r.return_date|date:"d M Y, H:i" }}</td>
+        <td><a href="{% url 'billing:bill_detail' r.bill.id %}" style="color:var(--primary); font-weight:700;">#{{ r.bill.id }}</a></td>
+        <td>{{ r.bill.customer_name_snapshot|default:"Walk-in" }}</td>
+        <td><strong style="color:var(--danger);">Rs. {{ r.refund_amount|floatformat:2 }}</strong></td>
+        <td style="font-size:0.85rem; color:var(--text-muted);">{{ r.reason|default:"—" }}</td>
+        <td>{{ r.created_by.username|default:"Staff" }}</td>
+        <td>
+          <a href="{% url 'billing:bill_detail' r.bill.id %}" class="btn btn-sm">View Bill</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.has_other_pages %}
+  <div style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm">← Previous</a>
+    {% endif %}
+    <span style="padding:6px 12px; font-size:0.88rem; color:var(--text-muted);">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <div style="font-size:2.5rem; margin-bottom:8px;">🔄</div>
+    <p>No product returns processed yet.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

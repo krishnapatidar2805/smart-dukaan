@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ customer.name }} · Smart Dukaan{% endblock %}
+{% block content %}
+<h2 style="margin-bottom:4px;">{{ customer.name }}</h2>
+<div style="color:var(--text-muted); margin-bottom:20px;">{{ customer.phone }}</div>
+
+<div class="stat-grid" style="max-width:320px;">
+  <div class="card stat-card">
+    <div class="stat-label">Current Due</div>
+    <div class="stat-value {% if customer.total_due > 0 %}danger{% else %}primary{% endif %}">Rs. {{ customer.total_due|floatformat:2 }}</div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1.3fr; gap:20px; align-items:start;">
+  <div class="card">
+    <h3 style="margin-top:0; font-size:1.05rem;">Record Payment Received</h3>
+    <form method="post">
+      {% csrf_token %}
+      <div class="field"><label>Amount (Rs.)</label>{{ form.amount }}</div>
+      <div class="field"><label>Note (optional)</label>{{ form.note }}</div>
+      <button type="submit" class="btn btn-primary">Record Payment</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0; font-size:1.05rem;">Transaction History</h3>
+    {% if transactions %}
+    <table>
+      <thead><tr><th>Date</th><th>Type</th><th>Amount</th></tr></thead>
+      <tbody>
+        {% for t in transactions %}
+        <tr>
+          <td>{{ t.date|date:"d M Y" }}</td>
+          <td>
+            {% if t.type == 'credit_given' %}<span class="badge badge-danger">Credit Given</span>
+            {% else %}<span class="badge badge-success">Payment Received</span>{% endif %}
+          </td>
+          <td>Rs. {{ t.amount }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No transactions yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

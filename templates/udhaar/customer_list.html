@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Udhaar (Credit) Register · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <div>
+    <h2>💳 Customer Udhaar (Credit) Ledger</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem; margin-top:2px;">Track customer balances, settlements and send WhatsApp payment reminders</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'dashboard:export_customers_csv' %}" class="btn" title="Download Udhaar ledger as CSV/Excel">📥 Export CSV</a>
+    <a href="{% url 'udhaar:customer_add' %}" class="btn btn-primary">+ Add Customer</a>
+  </div>
+</div>
+
+<div class="stat-grid" style="margin-bottom:20px;">
+  <div class="card stat-card">
+    <div class="stat-label">Total Market Udhaar Outstanding</div>
+    <div class="stat-value {% if total_due > 0 %}danger{% else %}primary{% endif %}">
+      Rs. {{ total_due|floatformat:2 }}
+    </div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Total Khata Accounts</div>
+    <div class="stat-value">{{ page_obj.paginator.count|default:customers|length }}</div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:20px;">
+  <form method="get" style="display:flex; gap:10px;">
+    <input type="text" name="q" value="{{ query }}" placeholder="Search customer name or phone number..." style="flex:1;">
+    <button type="submit" class="btn btn-primary">Search</button>
+    {% if query %}
+    <a href="{% url 'udhaar:customer_list' %}" class="btn">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+  {% if customers %}
+  <table>
+    <thead>
+      <tr>
+        <th>Customer Name</th>
+        <th>Phone Number</th>
+        <th>Pending Due Balance</th>
+        <th>Khata Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in customers %}
+      <tr>
+        <td><strong>{{ c.name }}</strong></td>
+        <td>📞 {{ c.phone }}</td>
+        <td>
+          {% if c.total_due > 0 %}
+          <strong style="color:var(--danger); font-size:1rem;">Rs. {{ c.total_due|floatformat:2 }}</strong>
+          {% else %}
+          <strong style="color:var(--primary);">Rs. 0.00</strong>
+          {% endif %}
+        </td>
+        <td>
+          {% if c.total_due > 0 %}
+          <span class="badge badge-danger">Payment Due</span>
+          {% else %}
+          <span class="badge badge-success">All Clear</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{% url 'udhaar:customer_detail' c.id %}" class="btn btn-sm">View Ledger / Pay</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.has_other_pages %}
+  <div style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm">← Previous</a>
+    {% endif %}
+    <span style="padding:6px 12px; font-size:0.88rem; color:var(--text-muted);">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <div style="font-size:2.5rem; margin-bottom:8px;">💳</div>
+    <p>No customer accounts found. Add your first customer khata!</p>
+    <a href="{% url 'udhaar:customer_add' %}" class="btn btn-primary" style="margin-top:12px;">+ Add Customer</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

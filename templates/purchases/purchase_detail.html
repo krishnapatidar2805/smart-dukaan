@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Purchase Order #{{ purchase.id }} · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="max-width:800px; margin:0 auto;">
+  <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <a href="{% url 'purchases:purchase_list' %}" style="color:var(--text-muted); font-size:0.88rem;">← Back to Purchase Orders</a>
+      <h2 style="margin-top:8px;">📦 Purchase Order #{{ purchase.id }}</h2>
+    </div>
+    <div>
+      <a href="{% url 'purchases:supplier_detail' purchase.supplier.id %}" class="btn">View Supplier Ledger</a>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:24px;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:0.8rem; color:var(--text-muted);">Supplier</div>
+        <div style="font-weight:700; font-size:1.05rem;">{{ purchase.supplier.name }}</div>
+        <div style="font-size:0.84rem; color:var(--text-muted);">📞 {{ purchase.supplier.phone }}</div>
+      </div>
+      <div>
+        <div style="font-size:0.8rem; color:var(--text-muted);">Invoice / Bill No.</div>
+        <div style="font-weight:700;">{{ purchase.invoice_no|default:"—" }}</div>
+      </div>
+      <div>
+        <div style="font-size:0.8rem; color:var(--text-muted);">Purchase Date</div>
+        <div style="font-weight:600;">{{ purchase.date|date:"d M Y, H:i" }}</div>
+      </div>
+      <div>
+        <div style="font-size:0.8rem; color:var(--text-muted);">Payment Status</div>
+        <div>
+          {% if purchase.payment_status == 'paid' %}
+          <span class="badge badge-success">Fully Paid</span>
+          {% elif purchase.payment_status == 'partial' %}
+          <span class="badge badge-danger">Partially Paid</span>
+          {% else %}
+          <span class="badge badge-danger">Unpaid (Credit)</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-bottom:12px; font-size:1.05rem;">Inward Items Received</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Product Name</th>
+          <th>Quantity Received</th>
+          <th>Cost Price (Per Unit)</th>
+          <th>Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in purchase.items.all %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td><strong>{{ item.product.name }}</strong></td>
+          <td>{{ item.quantity }} {{ item.product.get_unit_display }}</td>
+          <td>Rs. {{ item.unit_cost|floatformat:2 }}</td>
+          <td><strong>Rs. {{ item.subtotal|floatformat:2 }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">
+      <div class="summary-row">
+        <span>Total Purchase Amount</span>
+        <strong>Rs. {{ purchase.total_amount|floatformat:2 }}</strong>
+      </div>
+      <div class="summary-row">
+        <span>Amount Paid to Supplier</span>
+        <span style="color:var(--primary); font-weight:600;">Rs. {{ purchase.paid_amount|floatformat:2 }}</span>
+      </div>
+      <div class="summary-row total">
+        <span>Remaining Due Balance</span>
+        <span style="color:var(--danger);">Rs. {{ purchase.due_amount|floatformat:2 }}</span>
+      </div>
+    </div>
+
+    {% if purchase.notes %}
+    <div style="margin-top:20px; padding:12px; background:var(--surface-hover); border-radius:var(--radius); font-size:0.88rem;">
+      <strong>Notes:</strong> {{ purchase.notes }}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Purchase Orders · Smart Dukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+  <div>
+    <h2>📄 Purchase Orders (Stock Inward)</h2>
+    <div style="color:var(--text-muted); font-size:0.88rem; margin-top:2px;">History of stock purchases and supplier invoices</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'purchases:supplier_list' %}" class="btn">🏢 View Suppliers</a>
+    <a href="{% url 'purchases:purchase_create' %}" class="btn btn-primary">+ New Purchase Order</a>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:20px;">
+  <form method="get" style="display:flex; gap:10px;">
+    <input type="text" name="q" value="{{ query }}" placeholder="Search supplier or invoice number..." style="flex:1;">
+    <button type="submit" class="btn btn-primary">Search</button>
+    {% if query %}
+    <a href="{% url 'purchases:purchase_list' %}" class="btn">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+  {% if purchases %}
+  <table>
+    <thead>
+      <tr>
+        <th>PO #</th>
+        <th>Date</th>
+        <th>Supplier</th>
+        <th>Invoice #</th>
+        <th>Total Amount</th>
+        <th>Paid Amount</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in purchases %}
+      <tr>
+        <td><strong>#{{ p.id }}</strong></td>
+        <td>{{ p.date|date:"d M Y H:i" }}</td>
+        <td><strong>{{ p.supplier.name }}</strong></td>
+        <td>{{ p.invoice_no|default:"—" }}</td>
+        <td><strong>Rs. {{ p.total_amount|floatformat:2 }}</strong></td>
+        <td>Rs. {{ p.paid_amount|floatformat:2 }}</td>
+        <td>
+          {% if p.payment_status == 'paid' %}
+          <span class="badge badge-success">Paid</span>
+          {% elif p.payment_status == 'partial' %}
+          <span class="badge badge-danger">Partial (Due: Rs. {{ p.due_amount|floatformat:2 }})</span>
+          {% else %}
+          <span class="badge badge-danger">Pending</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{% url 'purchases:purchase_detail' p.id %}" class="btn btn-sm">View Details</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.has_other_pages %}
+  <div style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm">← Previous</a>
+    {% endif %}
+    <span style="padding:6px 12px; font-size:0.88rem; color:var(--text-muted);">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}" class="btn btn-sm">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <div style="font-size:2.5rem; margin-bottom:8px;">📦</div>
+    <p>No purchase orders recorded yet. Record your first stock delivery from a supplier!</p>
+    <a href="{% url 'purchases:purchase_create' %}" class="btn btn-primary" style="margin-top:12px;">+ Record Purchase Order</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Add Customer · Smart Dukaan{% endblock %}
+{% block content %}
+<h2 style="margin-bottom:20px;">Add Customer</h2>
+<div class="card" style="max-width:420px;">
+  <form method="post">
+    {% csrf_token %}
+    <div class="field"><label>Name</label>{{ form.name }}</div>
+    <div class="field"><label>Phone</label>{{ form.phone }}</div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{% url 'udhaar:customer_list' %}" class="btn">Cancel</a>
+  </form>
+</div>
+{% endblock %}
