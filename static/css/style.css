@@ -415,6 +415,23 @@ a {
   margin-bottom: 24px;
 }
 
+/* Responsive Dashboard Rows */
+.dashboard-grid-2col {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 24px;
+}
+
+.dashboard-grid-equal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 24px;
+}
+
 .stat-card {
   padding: 22px;
   display: flex;
@@ -1147,6 +1164,12 @@ tr:hover td {
   }
 
   /* Responsive Grids & Layouts */
+  .dashboard-grid-2col,
+  .dashboard-grid-equal {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
   .billing-grid {
     grid-template-columns: 1fr !important;
   }

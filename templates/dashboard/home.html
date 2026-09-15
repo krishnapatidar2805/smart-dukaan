@@ -2,12 +2,12 @@
 {% load static %}
 {% block title %}Dashboard & Analytics · Smart Dukaan{% endblock %}
 {% block content %}
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
   <div>
     <h2>📊 Store Intelligence & Analytics</h2>
     <div style="color:var(--text-muted); font-size:0.88rem; margin-top:2px;">Live sales performance, customer loyalty, rush hour analytics and restock alerts</div>
   </div>
-  <div style="display:flex; gap:10px;">
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
     <a href="{% url 'billing:cash_register' %}" class="btn">💰 Cash Register</a>
     <a href="{% url 'billing:bill_create' %}" class="btn btn-primary">+ New POS Bill</a>
   </div>
@@ -88,7 +88,7 @@
 </div>
 
 <!-- Row 1: Sales Trend + Payment Mode Split Doughnut -->
-<div style="display:grid; grid-template-columns:1.6fr 1fr; gap:20px; align-items:start; margin-bottom:24px;">
+<div class="dashboard-grid-2col">
   <div class="card">
     <h3 style="margin-top:0; font-size:1.05rem; margin-bottom:16px;">📈 Sales Trend — Last 7 Days</h3>
     <canvas id="salesChart" height="110"></canvas>
@@ -103,7 +103,7 @@
 </div>
 
 <!-- Row 2: Hourly Rush Hour Heatmap + Reorder Predictions -->
-<div style="display:grid; grid-template-columns:1.5fr 1fr; gap:20px; align-items:start; margin-bottom:24px;">
+<div class="dashboard-grid-2col">
   <div class="card">
     <h3 style="margin-top:0; font-size:1.05rem; margin-bottom:12px;">⏰ Peak Rush Hours Heatmap (Store Traffic)</h3>
     <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:14px;">Identifies customer footfall hours to optimize cashier staffing.</div>
@@ -145,7 +145,7 @@
 </div>
 
 <!-- Row 3: Top Selling Items + Loyalty Leaderboard -->
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+<div class="dashboard-grid-equal">
   <div class="card">
     <h3 style="margin-top:0; font-size:1.05rem; margin-bottom:14px;">🏆 Top Selling Items (30 days)</h3>
     {% if top_items %}
@@ -190,8 +190,8 @@
   </div>
 </div>
 
-<!-- Row 3: Most Profitable Items & Near-Expiry Stock Radar -->
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; margin-bottom:24px;">
+<!-- Row 4: Most Profitable Items & Near-Expiry Stock Radar -->
+<div class="dashboard-grid-equal">
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
       <h3 style="margin:0; font-size:1.05rem;">💰 Top Profitable Items (Highest Margin)</h3>
