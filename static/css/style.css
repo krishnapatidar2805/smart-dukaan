@@ -994,12 +994,10 @@ tr:hover td {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  z-index: 9998;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 99990 !important;
   opacity: 0;
-  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.25s ease;
   pointer-events: none;
 }
 
@@ -1019,6 +1017,8 @@ tr:hover td {
   .app-shell {
     display: block;
     min-height: 100vh;
+    position: static !important;
+    z-index: auto !important;
   }
 
   /* Off-canvas Slide-in Sidebar Drawer */
